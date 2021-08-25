@@ -1,0 +1,25 @@
+{% extends "main.html" %}
+
+{% block text_1 %}
+This is Package Evolution Service. It provides the information for migration from
+    an one RHEL-based distribution to another (between different major versions)
+{% endblock text_1 %}
+
+{% block table %}
+    {{ super() }}
+    <div class="container">
+        <div class="row">
+            <div class="col-lg">
+                <a href="{{ url_for('bulk_upload') }}">Bulk upload</a>
+            </div>
+            <div class="w-100"></div>
+            <div class="col-lg">
+                <a href="{{ url_for('dump_json') }}">Dump</a>
+            </div>
+            <div class="w-100"></div>
+            <div class="col-lg">
+                <a href="{{ url_for('add_action') }}">Add action</a>
+            </div>
+        </div>
+    </div>
+{% endblock table %}

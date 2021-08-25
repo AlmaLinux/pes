@@ -1,0 +1,5 @@
+---
+- name: Deploy the AL PES
+  hosts: pes
+  tasks:
+    - import_role: name=deploy

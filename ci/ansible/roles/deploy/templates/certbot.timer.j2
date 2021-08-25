@@ -1,0 +1,10 @@
+[Unit]
+Description={{ description }} Service
+
+[Timer]
+OnStartupSec=1m
+OnCalendar=monthly
+Persistent=true
+
+[Install]
+WantedBy=timers.target

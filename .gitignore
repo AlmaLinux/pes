@@ -1,0 +1,6 @@
+.idea
+.venv
+mirrors/*
+ci/ansible/inventory/*
+!ci/ansible/inventory/template
+pes.db

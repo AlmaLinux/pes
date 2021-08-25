@@ -1,0 +1,4 @@
+source_path: /root/pes
+nginx_environments:
+  - "Production"
+  - "Staging"

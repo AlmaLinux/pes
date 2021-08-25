@@ -1,0 +1,15 @@
+[pes]
+<place here IP or domain name of your api sever>
+
+[all:vars]
+container_env_prefix=prod
+sentry_dsn=<place here a DSN key of your Sentry>
+deploy_environment=Production
+uwsgi_processes=8
+flask_secret_key=<random Flask secret key>
+github_client_id=
+github_client_secret=
+backend_port=<external port of uwsgi container>
+uwsgi_address=<ip of uwsgi service inside a container>
+uwsgi_port=<port of uwsgi service inside a container>
+domain=

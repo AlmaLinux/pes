@@ -1,0 +1,58 @@
+<nav class="navbar navbar-light bg-light fixed-top">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">
+            <img src="{{ url_for('static', filename='images/logo.png') }}"
+                 alt="AlmaLinux logo"
+                 width="32"
+                 height="32"
+                 class="d-inline-block align-text-top">
+        </a>
+        <div class="navbar-nav flex-row-reverse">
+            <span class="nav-item">
+                <a class="nav-link link-secondary"
+                   href="https://github.com/AlmaLinux/"
+                   target="_blank">
+                    GitHub {% include "snipets/link_icon.html" %}
+                </a>
+            </span>
+            {% include "snipets/empty_nav_item.html" %}
+            <span class="nav-item">
+                <a class="nav-link link-secondary"
+                   href="https://bugs.almalinux.org/"
+                   target="_blank">
+                    Bugs {% include "snipets/link_icon.html" %}
+                </a>
+            </span>
+            {% include "snipets/empty_nav_item.html" %}
+            <span class="nav-item">
+                <a class="nav-link link-secondary"
+                   href="https://blog.almalinux.org/"
+                   target="_blank">
+                    Blog {% include "snipets/link_icon.html" %}
+                </a>
+            </span>
+            {% include "snipets/empty_nav_item.html" %}
+            <span class="nav-item">
+                <a class="nav-link link-secondary"
+                   href="https://almalinux.org/"
+                   target="_blank">
+                    Home {% include "snipets/link_icon.html" %}
+                </a>
+            </span>
+            {% include "snipets/empty_nav_item.html" %}
+            {% if logged %}
+                <span class="nav-item">
+                    <span class="nav-link navbar-text">Hello, {{ username }} (<a class="text-danger" href="{{ url_for('logout') }}"target="_self">Logout</a>)</span>
+                </span>
+            {% else %}
+                <span class="nav-item">
+                    <a class="nav-link link-secondary text-success"
+                       href="{{ url_for('login') }}"
+                       target="_self">
+                        Login
+                    </a>
+                </span>
+            {% endif %}
+        </div>
+    </div>
+</nav>

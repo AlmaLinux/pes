@@ -1,0 +1,18 @@
+---
+
+- name: Install certbot package
+  yum:
+    name:
+      - certbot
+    enablerepo: epel
+
+- name: Create acme directory
+  file:
+    name: "{{ config_root }}/acme/"
+    state: directory
+    mode: '0755'
+
+- name: Obtain certificate first time
+  systemd:
+    name: "certbot.service"
+    state: restarted

@@ -1,0 +1,58 @@
+---
+- name: Set facts for docker container with backend
+  set_fact:
+    uwsgi_processes: "{{ (uwsgi_processes is defined) | ternary(uwsgi_processes, 4) }}"
+    deploy_env: "{{ deploy_environment | default('Development') }}"
+    sentry_disabled: "{{ (deploy_environment is defined and deploy_environment in nginx_environments) | ternary('False', 'True') }}"
+    published_ports: "{{ (deploy_environment is defined and deploy_environment in nginx_environments) | ternary(['127.0.0.1:{{ backend_port }}', uwsgi_port] | join(':'), [backend_port, uwsgi_port] | join(':')) }}"
+
+
+- name: Build docker image
+  docker_image:
+    name: "python38-pes"
+    build:
+      path: "{{ source_path }}/ci/"
+      pull: yes
+      network: host
+    source: build
+    force_source: yes
+
+
+- name: Up the backend container from docker image
+  docker_container:
+    name: "{{ container_env_prefix }}_backend"
+    image: "python38-pes"
+    state: started
+    restart: yes
+    restart_policy: unless-stopped
+    hostname: backend
+    networks:
+      - name: backend
+    sysctls:
+      net.core.somaxconn: 65535
+    env:
+      UWSGI_PROCESSES: "{{ uwsgi_processes | string }}"
+      SENTRY_DSN: "{{ sentry_dsn | string }}"
+      PYTHONPATH: "/src/app"
+      DEPLOY_ENVIRONMENT: "{{ deploy_env | string }}"
+      SENTRY_DISABLED: "{{ sentry_disabled | string }}"
+      UWSGI_ADDRESS: "{{ uwsgi_address | string }}"
+      UWSGI_PORT: "{{ uwsgi_port | string }}"
+      FLASK_SECRET_KEY: "{{ flask_secret_key | string }}"
+      GITHUB_CLIENT_ID: "{{ github_client_id | string }}"
+      GITHUB_CLIENT_SECRET: "{{ github_client_secret | string }}"
+    published_ports:
+      - "{{ published_ports }}"
+    mounts:
+      - source: "{{ source_path }}/src/backend"
+        target: "/src/app"
+        read_only: yes
+        type: bind
+      - source: "{{ config_root }}/data"
+        target: "/data"
+        read_only: no
+        type: bind
+    log_driver: "json-file"
+    log_options:
+      max-size: "200m"
+      max-file: "5"

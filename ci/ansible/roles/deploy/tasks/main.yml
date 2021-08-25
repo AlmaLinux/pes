@@ -1,0 +1,10 @@
+---
+- include_tasks: common_setup.yml
+- include_tasks: deploy_files.yml
+- include_tasks: docker_networks.yml
+- include_tasks: backend_in_docker.yml
+- include_tasks: create_certbot_systemd_timer.yml
+  when: domain is defined and domain != ''
+- include_tasks: setup_https.yml
+  when: domain is defined and domain != ''
+- include_tasks: nginx_in_docker.yml

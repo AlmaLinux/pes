@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+certbot certonly --webroot -w="{{ config_root }}/acme/" -m soksanichenko@cloudlinux.com --agree-tos -d "{{ domain }}" -n
+docker exec -it {{ container_env_prefix }}_nginx nginx -s reload
+exit 0

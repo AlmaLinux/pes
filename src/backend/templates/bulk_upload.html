@@ -1,0 +1,49 @@
+{% extends "main.html" %}
+
+{% block table %}
+    {{ super() }}
+    {% if not is_uploaded %}
+        <form method="post" name="bulk_upload_form" role="form" enctype="multipart/form-data">
+            {{ form.hidden_tag() }}
+            <div class="container">
+                <div class="row">
+                    <div class="col-sm">
+                        {{ form.uploaded_file.label }}
+                    </div>
+                    <div class="col-sm">
+                        {{ form.uploaded_file }}
+                        <span class="text-danger">{{ ', '.join(form.errors[form.uploaded_file.name]) }}</span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm">
+                        &nbsp;
+                    </div>
+                    <div class="col-sm">
+                        &nbsp;
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm">
+                        &nbsp;
+                    </div>
+                    <div class="col-sm">
+                        <input type="submit" value="Upload JSON">
+                    </div>
+                </div>
+            </div>
+        </form>
+    {% else %}
+        <div class="container">
+            <div class="row">
+                <div class="col-lg">
+                    The JSON is uploaded
+                </div>
+                <div class="w-100"></div>
+                <div class="col-lg">
+                    <a href="{{ url_for('bulk_upload') }}">Upload another JSON</a>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+{% endblock table %}

@@ -1,0 +1,44 @@
+{% extends "main.html" %}
+
+{% block table %}
+    {{ super() }}
+    <form method="post" name="dump_form" role="form">
+        {{ form.hidden_tag() }}
+        <div class="container">
+            <div class="row">
+                <div class="col-sm">
+                    {{ form.source_release.label }}
+                </div>
+                <div class="col-sm">
+                    {{ form.source_release }}
+                    <span class="text-danger">{{ ', '.join(form.errors[form.source_release.name]) }}</span>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-sm">
+                    {{ form.target_release.label }}
+                </div>
+                <div class="col-sm">
+                    {{ form.target_release }}
+                    <span class="text-danger">{{ ', '.join(form.errors[form.target_release.name]) }}</span>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-sm">
+                    &nbsp;
+                </div>
+                <div class="col-sm">
+                    &nbsp;
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-sm">
+                    &nbsp;
+                </div>
+                <div class="col-sm">
+                    <input type="submit" value="Dump JSON">
+                </div>
+            </div>
+        </div>
+    </form>
+{% endblock table %}

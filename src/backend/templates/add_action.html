@@ -1,0 +1,145 @@
+{% extends "main.html" %}
+
+{% block table %}
+    {{ super() }}
+    {% if not is_added %}
+        <form method="post" name="add_action_form" role="form">
+            {{ form.hidden_tag() }}
+            <div class="container">
+                <div class="row">
+                    <div class="col-sm">
+                        {{ form.action.label }}
+                    </div>
+                    <div class="col-sm">
+                        {{ form.action }}
+                        <span class="text-danger">{{ ', '.join(form.errors[form.action.name]) }}</span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm">
+                        &nbsp;
+                    </div>
+                    <div class="col-sm">
+                        &nbsp;
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md">
+                        {{ form.source_release.label }}
+                    </div>
+                    <div class="col-md">
+                        {{ form.source_release }}&nbsp; {{ form.source_major_version(size=1) }}&nbsp;{{ form.source_minor_version(size=1) }}&nbsp;{{ form.source_generic }}&nbsp;{{ form.source_generic.label }}
+                        <span class="text-danger">{{ ', '.join(form.errors[form.source_release.name]) }}</span>
+                        <span class="text-danger">{{ ', '.join(form.errors[form.source_major_version.name]) }}</span>
+                        <span class="text-danger">{{ ', '.join(form.errors[form.source_minor_version.name]) }}</span>
+                        <span class="text-danger">{{ ', '.join(form.errors[form.source_generic.name]) }}</span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm">
+                        &nbsp;
+                    </div>
+                    <div class="col-sm">
+                        &nbsp;
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm">
+                        {{ form.target_release.label }}
+                    </div>
+                    <div class="col-sm">
+                        {{ form.target_release }}&nbsp; {{ form.target_major_version(size=1) }}&nbsp;{{ form.target_minor_version(size=1) }}&nbsp;{{ form.target_generic }}&nbsp;{{ form.target_generic.label }}
+                        <span class="text-danger">{{ ', '.join(form.errors[form.target_release.name]) }}</span>
+                        <span class="text-danger">{{ ', '.join(form.errors[form.target_major_version.name]) }}</span>
+                        <span class="text-danger">{{ ', '.join(form.errors[form.target_minor_version.name]) }}</span>
+                        <span class="text-danger">{{ ', '.join(form.errors[form.target_generic.name]) }}</span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm">
+                        &nbsp;
+                    </div>
+                    <div class="col-sm">
+                        &nbsp;
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm">
+                        {{ form.arches.label }}<br>
+                        Please, input architectures as list an each item of this is separated by comma
+                    </div>
+                    <div class="col-sm">
+                        {{ form.arches(size=50) }}
+                        <span class="text-danger">{{ ', '.join(form.errors[form.arches.name]) }}</span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm">
+                        &nbsp;
+                    </div>
+                    <div class="col-sm">
+                        &nbsp;
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm">
+                        {{ form.in_package_set.label }}<br>
+                        Please, input an each package on separate row. Format of row is <i>name,repository,module_name,module_stream</i><br>
+                        Just leave empty item if a package doesn't belong to a module. E.g. <i>name,repository,,</i>.
+                    </div>
+                    <div class="col-sm">
+                        {{ form.in_package_set(rows=5, cols=50) }}
+                        <span class="text-danger">{{ ', '.join(form.errors[form.in_package_set.name]) }}</span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm">
+                        &nbsp;
+                    </div>
+                    <div class="col-sm">
+                        &nbsp;
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm">
+                        {{ form.out_package_set.label }}<br>
+                        Please, input an each package on separate row. Format of row is <i>name,repository,module_name,module_stream</i><br>
+                        Just leave empty item if a package doesn't belong to a module. E.g. <i>name,repository,,</i>.
+                    </div>
+                    <div class="col-sm">
+                        {{ form.out_package_set(rows=5, cols=50) }}
+                        <span class="text-danger">{{ ', '.join(form.errors[form.out_package_set.name]) }}</span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm">
+                        &nbsp;
+                    </div>
+                    <div class="col-sm">
+                        &nbsp;
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm">
+                        &nbsp;
+                    </div>
+                    <div class="col-sm">
+                        <input type="submit" value="Add action">
+                    </div>
+                </div>
+            </div>
+        </form>
+    {% else %}
+        <div class="container">
+            <div class="row">
+                <div class="col-lg">
+                    Action is added successful
+                </div>
+                <div class="w-100"></div>
+                <div class="col-lg">
+                    <a href="{{ url_for('add_action') }}">Add another action</a>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+{% endblock table %}

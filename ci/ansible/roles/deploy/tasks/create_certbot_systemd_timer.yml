@@ -1,0 +1,33 @@
+---
+- name: Prepare script for run certbot
+  template:
+    src: "certbot.sh.j2"
+    dest: "/usr/bin/certbot.sh"
+    owner: root
+    group: root
+    mode: 0740
+    force: 'yes'
+
+- name: Prepare systemd units
+  template:
+    src: "{{ item.src }}"
+    dest: "/etc/systemd/system/{{ item.dst }}"
+    owner: root
+    group: root
+    mode: 0640
+    force: 'yes'
+  vars:
+    description: Run certbot
+  with_items:
+    - dst: "certbot.service"
+      src: "certbot.service.j2"
+    - dst: "certbot.timer"
+      src: "certbot.timer.j2"
+
+- name: Enable systemd timer
+  systemd:
+    name: "certbot.timer"
+    state: started
+    enabled: true
+    masked: false
+    daemon_reload: true
