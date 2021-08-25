@@ -8,7 +8,6 @@ from typing import Optional
 
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
-from sentry_sdk.integrations.redis import RedisIntegration
 
 
 def get_aws_instance_api() -> str:
@@ -44,7 +43,6 @@ def init_sentry_client(dsn: Optional[str] = None) -> None:
         ],
         integrations=[
             FlaskIntegration(),
-            RedisIntegration(),
         ],
     )
     with sentry_sdk.configure_scope() as scope:

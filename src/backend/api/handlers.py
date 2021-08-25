@@ -102,6 +102,8 @@ def modify_action(action_data: ActionData) -> None:
 
 def dump_pes_json(source_release: str, target_release: str):
 
+    legal_notice_value = 'AlmaLinux Foundation, Oracle and Others 2021 ©'
+
     def filter_action_by_releases(
             action: ActionData,
     ) -> bool:
@@ -117,7 +119,7 @@ def dump_pes_json(source_release: str, target_release: str):
 
     actions = get_actions()
     result = {
-        'legal_notice': 'AlmaLinux Foundation 2021 ©',
+        'legal_notice': legal_notice_value,
         'timestamp': datetime.datetime.strftime(
             datetime.datetime.now(),
             # YearMonthDayHoursMinutesZ
