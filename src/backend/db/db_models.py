@@ -1,8 +1,8 @@
 # coding=utf-8
 from __future__ import annotations
 
-from typing import List, Optional
-
+from typing import List, Optional, Union
+from sqlalchemy_pagination import paginate, Page
 from api.exceptions import DBRecordNotFound
 from db.data_models import (
     ActionType,
@@ -376,10 +376,8 @@ class Action(Base):
             release_data=action_data.target_release,
             session=session,
         )
-        actions = Action.search_by_dataclass(
-            action_data=action_data,
-            session=session,
-        )
+        actions = Action.search_by_dataclass(action_data=action_data,
+                                             session=session)
         actions = [
             action for action in actions if
             len(action.in_package_set) == len(in_package_set) and
@@ -406,7 +404,9 @@ class Action(Base):
     def search_by_dataclass(
             action_data: ActionData,
             session: Session,
-    ) -> Optional[List[Action]]:
+            page_size: int = None,
+            page: int = None,
+    ) -> Optional[Union[List[Action], Page]]:
         if action_data.is_empty:
             return None
         in_package_set = []
@@ -430,7 +430,7 @@ class Action(Base):
             session=session,
         )
         action_query = session.query(Action).filter_by(
-            **action_data.to_dict()
+            **action_data.to_dict(force_included=['id'])
         )
         if source_release is not None:
             action_query = action_query.filter(
@@ -464,7 +464,10 @@ class Action(Base):
                     )
                 ),
             )
-        result = action_query.all()
+        if page_size is None or page is None:
+            result = action_query.all()
+        else:
+            result = paginate(action_query, page=page, page_size=page_size)
         return result
 
 

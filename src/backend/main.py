@@ -2,9 +2,11 @@
 import json
 from typing import Union, Dict
 
+from requests import RequestException
+
 from api.exceptions import (
     BaseCustomException,
-    BadRequestFormatExceptioin,
+    BadRequestFormatExceptioin, CustomHTTPError,
 )
 from api.handlers import (
     push_action,
@@ -15,7 +17,8 @@ from api.handlers import (
     bulk_upload_handler,
     dump_handler,
     authorized_handler,
-    add_action_handler, before_request_handler,
+    add_or_edit_action_handler, before_request_handler, get_actions_handler,
+    get_action_handler,
 )
 from api.utils import (
     success_result,
@@ -60,6 +63,7 @@ def _prepare_data_dict() -> Dict[str, Union[str, bool]]:
     data = {
         'logged': bool(g.user_data),
         'username': g.user_data.github_login if g.user_data else None,
+        'is_our_member': session.get('is_our_member', False),
     }
     return data
 
@@ -121,21 +125,70 @@ def dump_json():
 
 
 @app.route(
+    '/view_action/<int:action_id>',
+    methods=('GET',),
+)
+def view_action(action_id: int):
+    data = {
+        'action': get_action_handler(action_id),
+    }
+    data.update(**_prepare_data_dict())
+    return render_template('view_action.html', **data)
+
+
+@app.route(
     '/add_action',
     methods=('GET', 'POST',),
 )
+@app.route(
+    '/add_action/<int:action_id>',
+    methods=('GET', 'POST',),
+)
 @login_requires
-def add_action():
+def add_action(action_id: int = None):
     add_action_form = AddAction()
     data = {
         'main_title': 'Add an action',
         'form': add_action_form,
         'is_added': False,
+        'saving_button_name': 'Add action',
     }
     data.update(_prepare_data_dict())
     if add_action_form.validate_on_submit():
-        add_action_handler(add_action_form=add_action_form)
+        add_or_edit_action_handler(
+            add_action_form=add_action_form,
+            is_new=True,
+        )
         data['is_added'] = True
+    return render_template('add_action.html', **data)
+
+
+@app.route(
+    '/edit_action/<int:action_id>',
+    methods=('GET', 'POST',),
+)
+@login_requires
+def edit_action(action_id: int):
+    edit_action_form = AddAction()
+    action = get_action_handler(action_id)
+    if request.method == 'GET':
+        edit_action_form.load_from_dataclass(action=action)
+    data = {
+        'main_title': 'Edit an action',
+        'form': edit_action_form,
+        'is_added': False,
+        'saving_button_name': 'Save action',
+    }
+    data.update(_prepare_data_dict())
+    if edit_action_form.validate_on_submit():
+        add_or_edit_action_handler(
+            add_action_form=edit_action_form,
+            is_new=False,
+        )
+        data['is_added'] = True
+        data['action'] = get_action_handler(action_id)
+        del data['main_title']
+        return redirect(url_for('view_action', action_id=action_id))
     return render_template('add_action.html', **data)
 
 
@@ -167,10 +220,7 @@ def login():
         return 'Already logged in'
 
 
-@app.route(
-    '/logout',
-    methods=('GET',),
-)
+@app.route('/logout', methods=('GET',))
 @clear_sessions_fields_before_logout
 def logout():
     return redirect(url_for('index'))
@@ -203,6 +253,38 @@ def actions():
         action = ActionData.create_from_json(data)
         action.is_approved = _is_our_member
         return remove_action(action)
+
+
+@app.route('/actions', methods=('GET',))
+@app.route('/actions/<int:page>', methods=('GET',))
+def get_list_actions(page: int = 1):
+
+    list_actions, pagination = get_actions_handler(page=page)
+    setattr(pagination, 'page', page)
+    data = {
+        'main_title': 'List of actions',
+        'actions': list_actions,
+        'pagination': pagination,
+    }
+    data.update(_prepare_data_dict())
+
+    return render_template('actions.html', **data)
+
+
+@app.route(
+    '/api/pull_requests',
+    methods=('POST', 'GET'),
+)
+@success_result
+@error_result
+@validate_json
+@membership_requires
+def pull_requests():
+    data = request.json
+    if request.method == 'GET':
+        return get_pull_requests(data)
+    elif request.method == 'POST':
+        return approve_pull_request(data)
 
 
 @app.route(
@@ -239,6 +321,18 @@ def handle_internal_server_error(error: InternalServerError) -> Response:
             'message': 'Internal server error',
         },
         status_code=error.code,
+    )
+
+
+@app.errorhandler(CustomHTTPError)
+def handle_internal_server_error(error: CustomHTTPError) -> Response:
+    logger.exception(error)
+    return jsonify_response(
+        result={
+            'reason': error.reason,
+            'url': error.url,
+        },
+        status_code=error.status_code,
     )
 
 

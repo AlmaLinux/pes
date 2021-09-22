@@ -1,0 +1,67 @@
+body {
+    padding-top: 65px;
+    padding-bottom: 35px;
+    font-size: 16px !important;
+    color: #2c3e50;
+}
+.table td,
+.table th {
+    width: 1% !important;
+    white-space: nowrap !important;
+}
+h1 {
+    font-weight: 600 !important;
+}
+table.dataTable thead .sorting:after,
+table.dataTable thead .sorting:before,
+table.dataTable thead .sorting_asc:after,
+table.dataTable thead .sorting_asc:before,
+table.dataTable thead .sorting_asc_disabled:after,
+table.dataTable thead .sorting_asc_disabled:before,
+table.dataTable thead .sorting_desc:after,
+table.dataTable thead .sorting_desc:before,
+table.dataTable thead .sorting_desc_disabled:after,
+table.dataTable thead .sorting_desc_disabled:before {
+    bottom: .5em;
+}
+.table-row {
+    cursor:pointer;
+}
+
+.red-icon {
+    color: red;
+}
+.green-icon {
+    color: green;
+}
+.view-icon {
+    color: darkolivegreen;
+}
+.edit-icon {
+    color: royalblue;
+}
+.icon-link {
+    text-decoration: none !important;
+}
+
+.action-removed {
+    background-color: #f5c6cb
+}
+.action-replaced {
+    background-color: #bee5eb
+}
+.action-split {
+    background-color: #ffeeba
+}
+.action-deprecated {
+    background-color: #d6d8db
+}
+.action-merged {
+    background-color: #D8BFD8
+}
+.action-moved {
+    background-color: #c3e6cb
+}
+.action-present {
+    background-color: #F8F8FF
+}

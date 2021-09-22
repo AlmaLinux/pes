@@ -11,7 +11,7 @@ from dataclasses import (
     is_dataclass,
     asdict, fields,
 )
-from typing import List
+from typing import List, Optional
 
 GENERIC_OS_NAME = 'generic'
 
@@ -116,7 +116,7 @@ class BaseData:
     __skip_fields__ = ()
     __convertors__ = {}
 
-    def to_dict(self) -> dict:
+    def to_dict(self, force_included: list[str] = tuple()) -> dict:
         result = dict()
         for f in fields(self):
             value_convertor = self.__convertors__.get(f.name)
@@ -127,7 +127,7 @@ class BaseData:
                 value = value_convertor(getattr(self, f.name))
             if is_dataclass(value):
                 continue
-            if f.name in self.__skip_fields__:
+            if f.name in self.__skip_fields__ and f.name not in force_included:
                 continue
             result[f.name] = value
         return result
@@ -222,7 +222,7 @@ class ActionData(BaseData):
     }
 
     id: int = None
-    is_approved: bool = False
+    is_approved: Optional[bool] = False
     source_release: ReleaseData = field(default_factory=ReleaseData)
     target_release: ReleaseData = field(default_factory=ReleaseData)
     action: ActionType = None

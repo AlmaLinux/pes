@@ -1,7 +1,6 @@
 # coding=utf-8
 
 from flask_api.status import (
-    HTTP_403_FORBIDDEN,
     HTTP_500_INTERNAL_SERVER_ERROR,
     HTTP_400_BAD_REQUEST,
     HTTP_404_NOT_FOUND,
@@ -27,3 +26,10 @@ class BadRequestFormatExceptioin(BaseCustomException):
 
 class DBRecordNotFound(BaseCustomException):
     response_code = HTTP_404_NOT_FOUND
+
+
+class CustomHTTPError(Exception):
+    def __init__(self, reason, url, status_code):
+        self.reason = reason
+        self.url = url
+        self.status_code = status_code

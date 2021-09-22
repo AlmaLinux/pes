@@ -1,0 +1,91 @@
+{% extends "main.html" %}
+
+{% block table %}
+    {{ super() }}
+    {% include "snipets/pagination.html" %}
+    <table id="dtBasic" class="table table-borderless text-center align-middle table-responsive-lg" data-order='[[ 0, "asc" ]]'>
+        <thead>
+            <tr>
+                <th rowspan="2"></th>
+                <th rowspan="2">Is approved</th>
+                <th rowspan="2">Action</th>
+                <th rowspan="2">Source release</th>
+                <th rowspan="2">Target release</th>
+                <th colspan="2">In package set</th>
+                <th colspan="2">Out package set</th>
+            </tr>
+            <tr>
+                <th>name</th>
+                <th>module:stream</th>
+                <th>name</th>
+                <th>module:stream</th>
+            </tr>
+        </thead>
+        <tbody class="table-bordered">
+        {% for action in actions %}
+            <tr class="action-{{ action.action }}">
+                <td rowspan="{{ action.packages | length }}">
+                    {% if is_our_member %}
+                        <a href="{{ url_for('edit_action', action_id=action.id) }}" class="icon-link" data-toggle="tooltip" data-placement="top" title="Edit action">
+                            <span class="material-icons edit-icon">edit</span>
+                        </a>
+                    {% endif %}
+                    &nbsp;
+                    <a href="{{ url_for('view_action', action_id=action.id) }}" class="icon-link">
+                        <span class="material-icons view-icon" data-toggle="tooltip" data-placement="top" title="View action">visibility</span>
+                    </a>
+                </td>
+                <td rowspan="{{ action.packages | length }}">
+                    {% if action.is_approved %}
+                        <span class="material-icons green-icon">done</span>
+                    {% else %}
+                        <span class="material-icons red-icon">close</span>
+                    {% endif %}
+                </td>
+                <td rowspan="{{ action.packages | length }}">{{ action.action }}</td>
+                <td rowspan="{{ action.packages | length }}">
+                    {% if action.source_release %}
+                        {{ action.source_release.os_name }} {{ action.source_release.major_version }}.{{ action.source_release.minor_version }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td rowspan="{{ action.packages | length }}">
+                    {% if action.target_release %}
+                        {{ action.target_release.os_name }} {{ action.target_release.major_version }}.{{ action.target_release.minor_version }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            {% for in_package, out_package in action.packages %}
+                {% if not loop.first %}
+                    <tr class="action-{{ action.action }}">
+                {% endif %}
+                        {% if in_package %}
+                            <td>{{ in_package.name }}</td>
+                            {% if in_package.module_stream %}
+                                <td>{{ in_package.module_stream.module }}:{{ in_package.module_stream.stream }}</td>
+                            {% else %}
+                                <td>-</td>
+                            {% endif %}
+                        {% else %}
+                            <td colspan="2">-</td>
+                        {% endif %}
+                        {% if out_package %}
+                            <td>{{ out_package.name }}</td>
+                            {% if out_package.module_stream %}
+                                <td>{{ out_package.module_stream.module }}:{{ out_package.module_stream.stream }}</td>
+                            {% else %}
+                                <td>-</td>
+                            {% endif %}
+                        {% else %}
+                            <td colspan="2">-</td>
+                        {% endif %}
+                    </tr>
+            {% endfor %}
+        {% endfor %}
+        </tbody>
+    </table>
+    <br>
+    {% include "snipets/pagination.html" %}
+{% endblock table %}

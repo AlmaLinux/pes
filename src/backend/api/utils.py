@@ -8,9 +8,11 @@ from typing import (
 )
 
 import jsonschema
+from requests import HTTPError
+
 from api.exceptions import (
     BaseCustomException,
-    BadRequestFormatExceptioin,
+    BadRequestFormatExceptioin, CustomHTTPError,
 )
 from common.sentry import get_logger
 from db.json_schemas import json_schema_mapping
@@ -25,6 +27,7 @@ from flask import g
 from flask_bs4 import Bootstrap
 from flask_github import GitHub, GitHubError
 from werkzeug.exceptions import InternalServerError
+from werkzeug.test import TestResponse
 
 logger = get_logger(__name__)
 
@@ -210,3 +213,30 @@ def create_flask_application() -> Flask:
     app.config['GITHUB_CLIENT_SECRET'] = os.environ['GITHUB_CLIENT_SECRET']
 
     return app
+
+
+def raise_for_status(response: TestResponse):
+    """
+        Raise for status of a response from Flask client
+    """
+
+    http_error_msg = ''
+    reason = response.data
+    if isinstance(reason, bytes):
+        # We attempt to decode utf-8 first because some servers
+        # choose to localize their reason strings. If the string
+        # isn't utf-8, we fall back to iso-8859-1 for all other
+        # encodings. (See PR #3538)
+        try:
+            reason = reason.decode('utf-8')
+        except UnicodeDecodeError:
+            reason = reason.decode('iso-8859-1')
+    else:
+        reason = reason
+
+    if 400 <= response.status_code < 500 or 500 <= response.status_code < 600:
+        raise CustomHTTPError(
+            reason=reason,
+            url=response.request.base_url,
+            status_code=response.status_code,
+        )

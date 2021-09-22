@@ -2,7 +2,7 @@
 from collections import defaultdict
 
 import wtforms.validators as validators
-from db.data_models import ActionType
+from db.data_models import ActionType, ActionData, GENERIC_OS_NAME
 from db.utils import get_releases_list
 from flask_wtf import FlaskForm
 from wtforms import (
@@ -12,6 +12,7 @@ from wtforms import (
     SelectField,
     IntegerField,
     Field,
+    HiddenField,
 )
 from wtforms.widgets import TextArea
 
@@ -64,10 +65,10 @@ def release_version_validator(form, field: Field):
 
 def generic_release_validator(form, field: Field):
     generic_release_dict = defaultdict(lambda: True, **{
-        'source_generic': not form.source_release.data,
-        'target_generic': not form.target_release.data,
+        'source_generic': form.source_generic.data,
+        'target_generic': form.target_generic.data,
     })
-    if field.data == '' and generic_release_dict[field.name]:
+    if field.data == '' and not generic_release_dict[field.name]:
         field.errors.append(
             'You should select release name if checkbox "generic" is not set'
         )
@@ -91,6 +92,9 @@ def package_set_validator(form, field: Field):
 
 
 class AddAction(FlaskForm):
+    id = HiddenField(
+        'ID of an action'
+    )
     action = SelectField(
         'Action type',
         validators=[
@@ -177,3 +181,20 @@ class AddAction(FlaskForm):
         ],
         widget=TextArea(),
     )
+
+    def load_from_dataclass(self, action: ActionData):
+        self.id.data = action.id
+        self.action.data = action.action
+        source_release = action.source_release
+        target_release = action.target_release
+        self.source_generic.data = source_release.os_name == GENERIC_OS_NAME
+        self.source_release.data = '' if source_release.os_name == GENERIC_OS_NAME else source_release.os_name
+        self.source_major_version.data = source_release.major_version
+        self.source_minor_version.data = source_release.minor_version
+        self.target_generic.data = target_release.os_name == GENERIC_OS_NAME
+        self.target_release.data = '' if target_release.os_name == GENERIC_OS_NAME else target_release.os_name
+        self.target_major_version.data = target_release.major_version
+        self.target_minor_version.data = target_release.minor_version
+        self.arches.data = ','.join(action.arches)
+        self.in_package_set.data = '\n'.join([f'{in_package.name},{in_package.repository},{in_package.module_stream.name if in_package.module_stream else ""},{in_package.module_stream.stream if in_package.module_stream else ""}' for in_package in action.in_package_set])
+        self.out_package_set.data = '\n'.join([f'{out_package.name},{out_package.repository},{out_package.module_stream.name if out_package.module_stream else ""},{out_package.module_stream.stream if out_package.module_stream else ""}' for out_package in action.out_package_set])

@@ -1,10 +1,13 @@
 # coding=utf-8
 import datetime
 import json
+from itertools import zip_longest
 from typing import (
     List,
-    Optional,
+    Optional, Union, Tuple,
 )
+
+from sqlalchemy_pagination import Page
 
 from api.exceptions import BadRequestFormatExceptioin
 from common.forms import AddAction
@@ -15,8 +18,9 @@ from flask_github import GitHub
 from common.sentry import (
     get_logger,
 )
-from api.utils import create_flask_client, is_our_member
-from flask import request, url_for, Request, session, g
+from api.utils import create_flask_client, is_our_member, raise_for_status
+from flask import request, url_for, session, g
+from werkzeug.test import TestResponse
 
 logger = get_logger(__name__)
 
@@ -77,12 +81,13 @@ def push_action(action_data: ActionData) -> None:
 
 def get_actions(
         action_data: ActionData = ActionData(is_approved=True),
-) -> Optional[List[ActionData]]:
+) -> Optional[Union[List[ActionData], Page]]:
     with session_scope() as db_session:
-        return [action.to_dataclass() for action in Action.search_by_dataclass(
-            action_data=action_data,
-            session=db_session,
-        )]
+        return [action.to_dataclass() for action in
+                Action.search_by_dataclass(
+                    action_data=action_data,
+                    session=db_session,
+                )]
 
 
 def remove_action(action_data: ActionData) -> None:
@@ -158,16 +163,17 @@ def bulk_upload_handler(json_dict: dict) -> None:
             ):
                 (action.get(root_key) or {}).pop(unnecessary_key, None)
         logger.info('Uploaded action "%s" from "%s"', i, len(actions))
-        create_flask_client().put(
+        result = create_flask_client().put(
             url_for('actions'),
             data=json.dumps(action),
             headers=list(request.headers),
             content_type='application/json',
         )
+        raise_for_status(result)
 
 
-def dump_handler(source_release: str, target_release: str) -> Request:
-    return create_flask_client().get(
+def dump_handler(source_release: str, target_release: str) -> TestResponse:
+    result = create_flask_client().get(
         url_for('dump'),
         data=json.dumps({
             'source_release': source_release,
@@ -176,9 +182,11 @@ def dump_handler(source_release: str, target_release: str) -> Request:
         headers=list(request.headers),
         content_type='application/json',
     )
+    raise_for_status(result)
+    return result
 
 
-def add_action_handler(add_action_form: AddAction) -> None:
+def add_or_edit_action_handler(add_action_form: AddAction, is_new: bool) -> None:
     json_dict = {
         'action': add_action_form.action.data,
         'in_packageset': None,
@@ -189,6 +197,8 @@ def add_action_handler(add_action_form: AddAction) -> None:
             arch.strip() for arch in add_action_form.arches.data.split(',')
         ],
     }
+    if not is_new:
+        json_dict['id'] = int(add_action_form.id.data)
     if add_action_form.source_generic.data:
         json_dict['initial_release'] = {}
         json_dict['initial_release']['os_name'] = GENERIC_OS_NAME
@@ -241,7 +251,7 @@ def add_action_handler(add_action_form: AddAction) -> None:
         json_dict['in_packageset']['package'].append({
             'name': name,
             'repository': repo,
-            'module_stream': module_data,
+            'modulestream': module_data,
         })
     for pkg_data in add_action_form.out_package_set.data.split():
         name, repo, module_name, module_stream = [
@@ -259,9 +269,46 @@ def add_action_handler(add_action_form: AddAction) -> None:
             'repository': repo,
             'module_stream': module_data,
         })
-    create_flask_client().put(
+    flask_client = create_flask_client()
+    if is_new:
+        http_method = flask_client.put
+    else:
+        http_method = flask_client.post
+    response = http_method(
         url_for('actions'),
         data=json.dumps(json_dict),
         headers=list(request.headers),
         content_type='application/json',
     )
+    raise_for_status(response)
+
+
+def get_actions_handler(page, page_size=20) -> Tuple[List[ActionData], Page]:
+    with session_scope() as db_session:
+        pagination = Action.search_by_dataclass(
+            action_data=ActionData(is_approved=None),
+            session=db_session,
+            page=page,
+            page_size=page_size,
+        )
+        actions = [action.to_dataclass() for action in pagination.items]
+    for action in actions:
+        setattr(action, 'packages', list(zip_longest(
+            action.in_package_set,
+            action.out_package_set,
+        )))
+    return actions, pagination
+
+
+def get_action_handler(action_id: int) -> ActionData:
+    with session_scope() as db_session:
+        actions = Action.search_by_dataclass(
+            action_data=ActionData(id=action_id, is_approved=None),
+            session=db_session,
+        )
+        action = actions[0].to_dataclass()
+    setattr(action, 'packages', list(zip_longest(
+        action.in_package_set,
+        action.out_package_set,
+    )))
+    return action

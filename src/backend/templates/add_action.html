@@ -28,7 +28,7 @@
                         {{ form.source_release.label }}
                     </div>
                     <div class="col-md">
-                        {{ form.source_release }}&nbsp; {{ form.source_major_version(size=1) }}&nbsp;{{ form.source_minor_version(size=1) }}&nbsp;{{ form.source_generic }}&nbsp;{{ form.source_generic.label }}
+                        {{ form.source_release }}&nbsp; {{ form.source_major_version(size=1) }}.{{ form.source_minor_version(size=1) }}&nbsp;{{ form.source_generic }}&nbsp;{{ form.source_generic.label }}
                         <span class="text-danger">{{ ', '.join(form.errors[form.source_release.name]) }}</span>
                         <span class="text-danger">{{ ', '.join(form.errors[form.source_major_version.name]) }}</span>
                         <span class="text-danger">{{ ', '.join(form.errors[form.source_minor_version.name]) }}</span>
@@ -48,7 +48,7 @@
                         {{ form.target_release.label }}
                     </div>
                     <div class="col-sm">
-                        {{ form.target_release }}&nbsp; {{ form.target_major_version(size=1) }}&nbsp;{{ form.target_minor_version(size=1) }}&nbsp;{{ form.target_generic }}&nbsp;{{ form.target_generic.label }}
+                        {{ form.target_release }}&nbsp; {{ form.target_major_version(size=1) }}.{{ form.target_minor_version(size=1) }}&nbsp;{{ form.target_generic }}&nbsp;{{ form.target_generic.label }}
                         <span class="text-danger">{{ ', '.join(form.errors[form.target_release.name]) }}</span>
                         <span class="text-danger">{{ ', '.join(form.errors[form.target_major_version.name]) }}</span>
                         <span class="text-danger">{{ ', '.join(form.errors[form.target_minor_version.name]) }}</span>
@@ -124,7 +124,7 @@
                         &nbsp;
                     </div>
                     <div class="col-sm">
-                        <input type="submit" value="Add action">
+                        <input type="submit" value="{{ saving_button_name }}">
                     </div>
                 </div>
             </div>
