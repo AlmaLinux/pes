@@ -9,6 +9,7 @@
                 <th rowspan="2"></th>
                 <th rowspan="2">Is approved</th>
                 <th rowspan="2">Action</th>
+                <th rowspan="2">Revision of action</th>
                 <th rowspan="2">Source release</th>
                 <th rowspan="2">Target release</th>
                 <th colspan="2">In package set</th>
@@ -44,6 +45,7 @@
                     {% endif %}
                 </td>
                 <td rowspan="{{ action.packages | length }}">{{ action.action }}</td>
+                <td rowspan="{{ action.packages | length }}">{{ action.version }}</td>
                 <td rowspan="{{ action.packages | length }}">
                     {% if action.source_release %}
                         {{ action.source_release.os_name }} {{ action.source_release.major_version }}.{{ action.source_release.minor_version }}

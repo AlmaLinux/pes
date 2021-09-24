@@ -222,6 +222,7 @@ class ActionData(BaseData):
     }
 
     id: int = None
+    version: int = None
     is_approved: Optional[bool] = False
     source_release: ReleaseData = field(default_factory=ReleaseData)
     target_release: ReleaseData = field(default_factory=ReleaseData)

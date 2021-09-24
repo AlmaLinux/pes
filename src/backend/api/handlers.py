@@ -11,7 +11,7 @@ from sqlalchemy_pagination import Page
 
 from api.exceptions import BadRequestFormatExceptioin
 from common.forms import AddAction
-from db.data_models import ActionData, ActionType, GENERIC_OS_NAME
+from db.data_models import ActionData, ActionType, GENERIC_OS_NAME, UserData
 from db.utils import session_scope
 from db.db_models import Action, User
 from flask_github import GitHub
@@ -29,9 +29,9 @@ def before_request_handler():
     g.user_data = None
     if 'user_id' in session:
         with session_scope() as db_session:
-            db_user = db_session.query(User).get(
-                session['user_id'],
-            )  # type: User
+            db_user = db_session.query(User).filter_by(
+                id=session['user_id'],
+            ).one_or_none()  # type: User
             if db_user is not None:
                 g.user_data = db_user.to_dataclass()
             else:
@@ -40,9 +40,13 @@ def before_request_handler():
 
 def authorized_handler(access_token: str, github: GitHub):
     with session_scope() as db_session:
+        g.user_data = UserData(
+            github_access_token=access_token,
+        )
+        github_user = github.get('/user')
         db_user = db_session.query(User).filter_by(
-            github_access_token=access_token
-        ).first()
+            github_id=github_user['id']
+        ).one_or_none()
         if db_user is None:
             db_user = User(access_token)
             db_session.add(db_user)
@@ -51,8 +55,6 @@ def authorized_handler(access_token: str, github: GitHub):
 
         # Not necessary to get these details here
         # but it helps humans to identify users easily.
-        g.user_data = db_user.to_dataclass()
-        github_user = github.get('/user')
         db_user.github_id = github_user['id']
         db_user.github_login = github_user['login']
         if github_user['organizations_url']:

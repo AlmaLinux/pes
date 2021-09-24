@@ -238,6 +238,7 @@ class Action(Base):
     __tablename__ = 'actions'
 
     id = Column(Integer, nullable=False, primary_key=True)
+    version = Column(Integer, nullable=False, default=1)
     is_approved = Column(Boolean, nullable=False, default=False)
     source_release_id = Column(Integer, ForeignKey(
         'releases.id',
@@ -297,6 +298,7 @@ class Action(Base):
     def to_dataclass(self) -> ActionData:
         return ActionData(
             id=self.id,
+            version=self.version,
             source_release=self.source_release.to_dataclass() if
             self.source_release else None,
             target_release=self.target_release.to_dataclass() if
@@ -343,6 +345,7 @@ class Action(Base):
         action.target_release = target_release
         action.in_package_set = in_package_set
         action.out_package_set = out_package_set
+        action.version += 1
         session.query(Release).filter(
             ~Release.actions_target.any(),
             ~Release.actions_source.any(),

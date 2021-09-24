@@ -2,7 +2,7 @@
 
 {% block text_1 %}
     <ul class="list-group">
-        <li class="list-group-item"><b>Action #</b>{{ action.id }}&nbsp;
+        <li class="list-group-item"><b>Action ID #</b>{{ action.id }}&nbsp;(revision #{{ action.version }})&nbsp;
             {% if is_our_member %}
                 <a href="{{ url_for('edit_action', action_id=action.id) }}" class="icon-link" data-toggle="tooltip" data-placement="top" title="Edit action">
                     <span class="material-icons edit-icon">edit</span>
@@ -79,4 +79,5 @@
             {% endfor %}
         </tbody>
     </table>
+    <a href="{{ url_for('get_list_actions') }}">Back to the list</a>
 {% endblock table %}
