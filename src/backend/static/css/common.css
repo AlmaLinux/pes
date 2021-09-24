@@ -24,14 +24,16 @@ table.dataTable thead .sorting_desc_disabled:after,
 table.dataTable thead .sorting_desc_disabled:before {
     bottom: .5em;
 }
-.table-row {
-    cursor:pointer;
+.linkable-element {
+    cursor: pointer;
 }
-
-.red-icon {
+.not-approved-icon {
     color: red;
 }
-.green-icon {
+.not-approved-icon {
+    color: red;
+}
+.approved-icon {
     color: green;
 }
 .view-icon {
@@ -39,6 +41,9 @@ table.dataTable thead .sorting_desc_disabled:before {
 }
 .edit-icon {
     color: royalblue;
+}
+.delete-icon {
+    color: darkred;
 }
 .icon-link {
     text-decoration: none !important;

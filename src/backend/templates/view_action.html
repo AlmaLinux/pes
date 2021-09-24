@@ -7,6 +7,12 @@
                 <a href="{{ url_for('edit_action', action_id=action.id) }}" class="icon-link" data-toggle="tooltip" data-placement="top" title="Edit action">
                     <span class="material-icons edit-icon">edit</span>
                 </a>
+                <span class="material-icons linkable-element icon-link delete-icon" data-action-id="{{ action.id }}" data-toggle="tooltip" data-placement="top" title="Delete action">delete</span>
+                {% if not action.is_approved %}
+                    <span class="material-icons linkable-element icon-link not-approved-icon" data-action-id="{{ action.id }}" data-toggle="tooltip" data-placement="top" title="Approve action">verified</span>
+                {% else %}
+                    <span class="material-icons icon-link approved-icon" data-toggle="tooltip" data-placement="top" title="Approved">verified</span>
+                {% endif %}
             {% endif %}
         </li>
         <li class="list-group-item"><b>Action type:</b> {{ action.action }}</li>

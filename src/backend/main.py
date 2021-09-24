@@ -18,7 +18,7 @@ from api.handlers import (
     dump_handler,
     authorized_handler,
     add_or_edit_action_handler, before_request_handler, get_actions_handler,
-    get_action_handler,
+    get_action_handler, approve_pull_request,
 )
 from api.utils import (
     success_result,
@@ -177,7 +177,8 @@ def edit_action(action_id: int):
         'main_title': 'Edit an action',
         'form': edit_action_form,
         'is_added': False,
-        'saving_button_name': 'Save action',
+        'saving_button_name': 'Save action' if action.is_approved
+        else 'Approve & save action',
     }
     data.update(_prepare_data_dict())
     if edit_action_form.validate_on_submit():
@@ -281,9 +282,7 @@ def get_list_actions(page: int = 1):
 @membership_requires
 def pull_requests():
     data = request.json
-    if request.method == 'GET':
-        return get_pull_requests(data)
-    elif request.method == 'POST':
+    if request.method == 'POST':
         return approve_pull_request(data)
 
 

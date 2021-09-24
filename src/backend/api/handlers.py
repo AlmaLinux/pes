@@ -4,7 +4,7 @@ import json
 from itertools import zip_longest
 from typing import (
     List,
-    Optional, Union, Tuple,
+    Optional, Union, Tuple, Dict,
 )
 
 from sqlalchemy_pagination import Page
@@ -107,7 +107,7 @@ def modify_action(action_data: ActionData) -> None:
 
 def dump_pes_json(source_release: str, target_release: str):
 
-    legal_notice_value = 'AlmaLinux Foundation, Oracle and Others 2021 ©'
+    legal_notice_value = 'Copyright (c) 2021 Oracle, AlmaLinux OS Foundation'
 
     def filter_action_by_releases(
             action: ActionData,
@@ -224,7 +224,7 @@ def add_or_edit_action_handler(add_action_form: AddAction, is_new: bool) -> None
     elif add_action_form.target_release != '':
         json_dict['release'] = {}
         json_dict['release']['os_name'] = add_action_form. \
-            source_release.data
+            target_release.data
         json_dict['release']['major_version'] = add_action_form. \
             target_major_version.data
         json_dict['release']['minor_version'] = add_action_form. \
@@ -267,7 +267,7 @@ def add_or_edit_action_handler(add_action_form: AddAction, is_new: bool) -> None
         json_dict['out_packageset']['package'].append({
             'name': name,
             'repository': repo,
-            'module_stream': module_data,
+            'modulestream': module_data,
         })
     flask_client = create_flask_client()
     if is_new:
@@ -312,3 +312,14 @@ def get_action_handler(action_id: int) -> ActionData:
         action.out_package_set,
     )))
     return action
+
+
+def approve_pull_request(data: dict[str, int]):
+    with session_scope() as db_session:
+        actions = Action.search_by_dataclass(
+            action_data=ActionData(id=data['id'], is_approved=None),
+            session=db_session,
+        )
+        action = actions[0]
+        action.is_approved = True
+        db_session.flush()

@@ -506,18 +506,10 @@ post_pull_request = {
     "properties": {
         "id": {
             "type": "integer"
-        },
-        "action": {
-            "type": "string",
-            "enum": [
-                "approve",
-                "reject"
-            ]
         }
     },
     "required": [
         "id",
-        "action"
     ]
 }
 
