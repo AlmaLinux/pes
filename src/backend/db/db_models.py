@@ -11,7 +11,7 @@ from db.data_models import (
     PackageType,
     ModuleStreamData,
     ReleaseData,
-    UserData,
+    UserData, GitHubOrgData,
 )
 from sqlalchemy import (
     Column,
@@ -474,23 +474,111 @@ class Action(Base):
         return result
 
 
+users_github_orgs = Table(
+    'users_github_orgs',
+    Base.metadata,
+    Column(
+        'user_id', Integer, ForeignKey(
+            'users.id',
+            ondelete='CASCADE',
+        ),
+    ),
+    Column(
+        'github_org_id', Integer, ForeignKey(
+            'github_orgs.id',
+            ondelete='CASCADE',
+        )
+    ),
+)
+
+
+class GitHubOrg(Base):
+    __tablename__ = 'github_orgs'
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+
+    @staticmethod
+    def search_by_dataclass(session: Session, github_org_data: GitHubOrgData):
+        return session.query(GitHubOrg).filter_by(
+            **github_org_data.to_dict(),
+        ).all()
+
+    def to_dataclass(self) -> GitHubOrgData:
+        return GitHubOrgData(
+            name=self.name,
+        )
+
+    @staticmethod
+    def create_from_dataclass(
+            session: Session,
+            github_org_data: GitHubOrgData,
+    ):
+        github_org = session.query(GitHubOrg).filter_by(
+            **github_org_data.to_dict(),
+        ).one_or_none()
+        if github_org is None:
+            github_org = GitHubOrg(
+                **github_org_data.to_dict(),
+            )
+            session.add(github_org)
+            session.flush()
+        return github_org
+
+
 class User(Base):
     __tablename__ = 'users'
 
     id = Column(Integer, primary_key=True)
-    github_access_token = Column(String(255))
+    github_access_token = Column(String)
     github_id = Column(Integer)
-    github_login = Column(String(255))
-    github_orgs = Column(String, default='')
+    github_login = Column(String)
+    github_orgs = relationship(
+        'GitHubOrg',
+        secondary=users_github_orgs,
+        passive_deletes=True,
+        backref='users',
+    )
 
-    def __init__(self, github_access_token):
-        self.github_access_token = github_access_token
+    @staticmethod
+    def search_by_dataclass(
+            session: Session,
+            user_data: UserData,
+            only_one: bool,
+    ):
+        query = session.query(User).filter_by(
+            **user_data.to_dict(),
+        )
+        if only_one:
+            return query.one_or_none()
+        else:
+            return query.all()
+
+    @staticmethod
+    def create_from_dataclass(session: Session, user_data: UserData):
+        user = session.query(User).filter_by(
+            **user_data.to_dict(),
+        ).one_or_none()
+        github_orgs = [
+            GitHubOrg.create_from_dataclass(
+                session=session,
+                github_org_data=github_org_data,
+            ) for github_org_data in user_data.github_orgs
+        ]
+        if user is None:
+            user = User(
+                **user_data.to_dict()
+            )
+            user.github_orgs = github_orgs
+            session.add(user)
+            session.flush()
+        return user
 
     def to_dataclass(self) -> UserData:
         return UserData(
             github_access_token=self.github_access_token,
             github_id=self.github_id,
             github_login=self.github_login,
-            github_orgs=self.github_orgs.split(',') if self.github_orgs
-            else None,
+            github_orgs=[
+                github_org.to_dataclass() for github_org in self.github_orgs
+            ],
         )

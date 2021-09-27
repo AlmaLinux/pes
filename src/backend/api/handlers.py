@@ -11,9 +11,10 @@ from sqlalchemy_pagination import Page
 
 from api.exceptions import BadRequestFormatExceptioin
 from common.forms import AddAction
-from db.data_models import ActionData, ActionType, GENERIC_OS_NAME, UserData
+from db.data_models import ActionData, ActionType, GENERIC_OS_NAME, UserData, \
+    GitHubOrgData
 from db.utils import session_scope
-from db.db_models import Action, User
+from db.db_models import Action, User, GitHubOrg
 from flask_github import GitHub
 from common.sentry import (
     get_logger,
@@ -44,26 +45,20 @@ def authorized_handler(access_token: str, github: GitHub):
             github_access_token=access_token,
         )
         github_user = github.get('/user')
-        db_user = db_session.query(User).filter_by(
-            github_id=github_user['id']
-        ).one_or_none()
-        if db_user is None:
-            db_user = User(access_token)
-            db_session.add(db_user)
-
-        db_user.github_access_token = access_token
-
-        # Not necessary to get these details here
-        # but it helps humans to identify users easily.
-        db_user.github_id = github_user['id']
-        db_user.github_login = github_user['login']
+        user_data = UserData(
+            github_access_token=access_token,
+            github_id=github_user['id'],
+            github_login=github_user['login'],
+        )
         if github_user['organizations_url']:
-            orgs = [
-                org['login'] for org in
+            user_data.github_orgs = [
+                GitHubOrgData(name=org['login']) for org in
                 github.get(github_user['organizations_url'])
             ]
-            db_user.github_orgs = ','.join(orgs)
-        db_session.flush()
+        db_user = User.create_from_dataclass(
+            session=db_session,
+            user_data=user_data,
+        )
         g.user_data = db_user.to_dataclass()
 
         session.update({

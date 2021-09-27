@@ -142,11 +142,21 @@ class BaseData:
 
 
 @dataclass
+class GitHubOrgData(BaseData):
+    name: str = None
+
+
+@dataclass
 class UserData(BaseData):
+
+    __skip_fields__ = (
+        'github_orgs',
+    )
+
     github_access_token: str = None
     github_id: int = None
     github_login: str = None
-    github_orgs: List[str] = field(default_factory=list)
+    github_orgs: List[GitHubOrgData] = field(default_factory=list)
 
 
 @dataclass
