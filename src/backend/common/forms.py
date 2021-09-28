@@ -2,6 +2,7 @@
 from collections import defaultdict
 
 import wtforms.validators as validators
+
 from db.data_models import ActionType, ActionData, GENERIC_OS_NAME
 from db.utils import get_releases_list
 from flask_wtf import FlaskForm
@@ -27,6 +28,7 @@ class BulkUpload(FlaskForm):
 
 
 class Dump(FlaskForm):
+
     source_release = SelectField(
         'Source OS',
         validators=[
@@ -40,6 +42,13 @@ class Dump(FlaskForm):
             validators.DataRequired(),
         ],
         choices=get_releases_list()
+    )
+    org = SelectField(
+        'GitHub organization',
+        validators=[
+            validators.DataRequired(),
+        ],
+        choices=[]
     )
 
 
@@ -181,10 +190,18 @@ class AddAction(FlaskForm):
         ],
         widget=TextArea(),
     )
+    org = SelectField(
+        'GitHub organization',
+        validators=[
+            validators.DataRequired(),
+        ],
+        choices=[]
+    )
 
     def load_from_dataclass(self, action: ActionData):
         self.id.data = action.id
         self.action.data = action.action
+        self.org.data = action.github_org
         source_release = action.source_release
         target_release = action.target_release
         self.source_generic.data = source_release.os_name == GENERIC_OS_NAME

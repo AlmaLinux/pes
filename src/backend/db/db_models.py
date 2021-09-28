@@ -68,7 +68,9 @@ class GitHubOrg(Base):
             session: Session,
             github_org_data: GitHubOrgData,
             only_one: bool,
-    ) -> Union[List[GitHubOrg], GitHubOrg]:
+    ) -> Optional[Union[List[GitHubOrg], GitHubOrg]]:
+        if github_org_data is None:
+            return
         query = session.query(GitHubOrg).filter_by(
             **github_org_data.to_dict(),
         )
@@ -466,6 +468,7 @@ class Action(Base):
     id = Column(Integer, nullable=False, primary_key=True)
     version = Column(Integer, nullable=False, default=1)
     is_approved = Column(Boolean, nullable=False, default=False)
+    github_org = Column(String, nullable=True)
     source_release_id = Column(Integer, ForeignKey(
         'releases.id',
         ondelete='CASCADE',
@@ -554,6 +557,8 @@ class Action(Base):
                              in self.out_package_set],
             arches=self.arches.split(','),
             is_approved=self.is_approved,
+            github_org=self.github_org if
+            self.github_org else None
         )
 
     @staticmethod

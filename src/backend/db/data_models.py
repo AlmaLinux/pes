@@ -14,6 +14,8 @@ from dataclasses import (
 from typing import List, Optional
 
 GENERIC_OS_NAME = 'generic'
+GLOBAL_ORGANIZATION = 'All'
+MAIN_ORGANIZATION = 'AlmaLinux'
 
 
 ReposMapping = {
@@ -24,7 +26,7 @@ ReposMapping = {
         'el8-ha': 'centos8-ha',
         'el8-extras': 'centos8-extras',
     },
-    'AlmaLinux': {
+    MAIN_ORGANIZATION: {
         'el8-baseos': 'almalinux8-baseos',
         'el8-appstream': 'almalinux8-appstream',
         'el8-powertools': 'almalinux8-powertools',
@@ -155,6 +157,12 @@ class ActionHistoryData(BaseData):
 class GitHubOrgData(BaseData):
     name: str = None
 
+    @staticmethod
+    def create_from_json(json_data: dict) -> GitHubOrgData:
+        return GitHubOrgData(
+            name=json_data.get('name'),
+        )
+
 
 @dataclass
 class UserData(BaseData):
@@ -245,6 +253,7 @@ class ActionData(BaseData):
     id: int = None
     version: int = None
     is_approved: Optional[bool] = False
+    github_org: str = None
     source_release: ReleaseData = field(default_factory=ReleaseData)
     target_release: ReleaseData = field(default_factory=ReleaseData)
     action: ActionType = None
@@ -260,6 +269,7 @@ class ActionData(BaseData):
         target_release = json_data.get('release') or {}
         return ActionData(
             id=json_data.get('id'),
+            github_org=json_data.get('org'),
             source_release=ReleaseData.create_from_json(source_release),
             target_release=ReleaseData.create_from_json(target_release),
             action=json_data.get('action'),
@@ -297,6 +307,7 @@ class ActionData(BaseData):
         result['release'] = deepcopy(result['target_release'])
         del result['source_release']
         del result['target_release']
+        del result['github_org']
         for in_package in result['in_package_set']:
             result['in_packageset']['package'].append(in_package)
             result['in_packageset']['set_id'] += in_package['id']

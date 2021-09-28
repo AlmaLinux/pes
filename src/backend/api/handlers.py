@@ -12,7 +12,7 @@ from sqlalchemy_pagination import Page
 from api.exceptions import BadRequestFormatExceptioin
 from common.forms import AddAction
 from db.data_models import ActionData, ActionType, GENERIC_OS_NAME, UserData, \
-    GitHubOrgData, ActionHistoryData
+    GitHubOrgData, ActionHistoryData, GLOBAL_ORGANIZATION
 from db.utils import session_scope
 from db.db_models import Action, User, GitHubOrg, ActionHistory
 from flask_github import GitHub
@@ -53,17 +53,32 @@ def authorized_handler(access_token: str, github: GitHub):
             github_id=github_user['id'],
             github_login=github_user['login'],
         )
-        if github_user['organizations_url']:
-            user_data.github_orgs = [
-                GitHubOrgData(name=org['login']) for org in
-                github.get(github_user['organizations_url'])
-            ]
-        db_user = User.create_from_dataclass(
+        github_orgs_data = [
+            GitHubOrgData(name=org['organization']['login']) for org in
+            github.get('/user/memberships/orgs')
+            if org['state'] == 'active'
+        ]
+        db_user = User.search_by_dataclass(
             session=db_session,
             user_data=user_data,
+            only_one=True,
         )
-        g.user_data = db_user.to_dataclass()
+        if db_user is None:
+            db_user = User.create_from_dataclass(
+                session=db_session,
+                user_data=user_data,
+            )
 
+        g.user_data = db_user.to_dataclass()
+        github_orgs = [
+            GitHubOrg.search_by_dataclass(
+                session=db_session,
+                github_org_data=org_data,
+                only_one=True,
+            ) for org_data in github_orgs_data
+        ]
+        db_user.github_orgs = github_orgs
+        db_session.flush()
         session.update({
             'user_id': db_user.id,
             'is_our_member': is_our_member(github=github)
@@ -103,7 +118,11 @@ def modify_action(action_data: ActionData) -> None:
         )
 
 
-def dump_pes_json(source_release: str, target_release: str):
+def dump_pes_json(
+        source_release: str,
+        target_release: str,
+        organization: str,
+):
 
     legal_notice_value = 'Copyright (c) 2021 Oracle, AlmaLinux OS Foundation'
 
@@ -120,7 +139,11 @@ def dump_pes_json(source_release: str, target_release: str):
             return True
         return False
 
-    actions = get_actions()
+    if organization == GLOBAL_ORGANIZATION:
+        action_data = ActionData(is_approved=True)
+    else:
+        action_data = ActionData(is_approved=True, github_org=organization)
+    actions = get_actions(action_data=action_data)
     result = {
         'legal_notice': legal_notice_value,
         'timestamp': datetime.datetime.strftime(
@@ -133,7 +156,7 @@ def dump_pes_json(source_release: str, target_release: str):
                 source_release=source_release,
                 target_release=target_release,
             ) for action in actions if
-            filter_action_by_releases(action) and action.is_approved
+            filter_action_by_releases(action)
         ],
     }
 
@@ -170,12 +193,17 @@ def bulk_upload_handler(json_dict: dict) -> None:
         raise_for_status(result)
 
 
-def dump_handler(source_release: str, target_release: str) -> TestResponse:
+def dump_handler(
+        source_release: str,
+        target_release: str,
+        organization: str,
+) -> TestResponse:
     result = create_flask_client().get(
         url_for('dump'),
         data=json.dumps({
             'source_release': source_release,
             'target_release': target_release,
+            'org': organization,
         }),
         headers=list(request.headers),
         content_type='application/json',
@@ -187,6 +215,7 @@ def dump_handler(source_release: str, target_release: str) -> TestResponse:
 def add_or_edit_action_handler(add_action_form: AddAction, is_new: bool) -> None:
     json_dict = {
         'action': add_action_form.action.data,
+        'org': add_action_form.org.data,
         'in_packageset': None,
         'out_packageset': None,
         'initial_release': None,

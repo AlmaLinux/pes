@@ -29,7 +29,7 @@ from api.utils import (
     membership_requires,
     login_requires,
     create_flask_application,
-    clear_sessions_fields_before_logout,
+    clear_sessions_fields_before_logout, get_user_organizations,
 )
 from common.forms import (
     BulkUpload,
@@ -147,6 +147,7 @@ def bulk_upload():
 )
 def dump_json():
     dump_form = Dump()
+    dump_form.org.choices = get_user_organizations()
     data = {
         'main_title': 'Dump JSON',
         'form': dump_form,
@@ -156,6 +157,7 @@ def dump_json():
         req = dump_handler(
             source_release=dump_form.source_release.data,
             target_release=dump_form.target_release.data,
+            organization=dump_form.org.data,
         )
         return jsonify_response(
             result=req.json,
@@ -187,6 +189,7 @@ def view_action(action_id: int):
 @login_requires
 def add_action(action_id: int = None):
     add_action_form = AddAction()
+    add_action_form.org.choices = get_user_organizations(add_specific=False)
     data = {
         'main_title': 'Add an action',
         'form': add_action_form,
@@ -210,6 +213,7 @@ def add_action(action_id: int = None):
 @login_requires
 def edit_action(action_id: int):
     edit_action_form = AddAction()
+    edit_action_form.org.choices = get_user_organizations(add_specific=False)
     action = get_action_handler(action_id)
     if request.method == 'GET':
         edit_action_form.load_from_dataclass(action=action)
@@ -350,6 +354,7 @@ def dump():
     return dump_pes_json(
         source_release=data['source_release'],
         target_release=data['target_release'],
+        organization=data['org'],
     )
 
 

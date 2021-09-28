@@ -18,6 +18,9 @@ put_action = {
                 "renamed"
             ]
         },
+        "org": {
+            "type": "string",
+        },
         "in_packageset": {
             "type": "object",
             "properties": {
@@ -154,6 +157,7 @@ put_action = {
     },
     "required": [
         "action",
+        "org",
         "in_packageset",
         "out_packageset",
         "initial_release",
@@ -353,6 +357,9 @@ post_action = {
                 "renamed"
             ]
         },
+        "org": {
+            "type": "string",
+        },
         "in_packageset": {
             "type": "object",
             "properties": {
@@ -492,6 +499,7 @@ post_action = {
     "required": [
         "id",
         "action",
+        "org",
         "in_packageset",
         "out_packageset",
         "initial_release",
@@ -523,10 +531,14 @@ get_dump = {
         "target_release": {
             "type": "string"
         },
+        "org": {
+            "type": "string"
+        },
     },
     "required": [
         "source_release",
-        "target_release"
+        "target_release",
+        "org"
     ]
 }
 

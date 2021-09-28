@@ -15,7 +15,9 @@ from api.exceptions import (
     BadRequestFormatExceptioin, CustomHTTPError,
 )
 from common.sentry import get_logger
-from db.data_models import GitHubOrgData
+from db.data_models import GitHubOrgData, UserData, MAIN_ORGANIZATION, \
+    GLOBAL_ORGANIZATION
+from db.db_models import GitHubOrg
 from db.json_schemas import json_schema_mapping
 from flask import (
     Response,
@@ -29,6 +31,8 @@ from flask_bs4 import Bootstrap
 from flask_github import GitHub, GitHubError
 from werkzeug.exceptions import InternalServerError
 from werkzeug.test import TestResponse
+
+from db.utils import session_scope
 
 logger = get_logger(__name__)
 
@@ -144,7 +148,7 @@ def is_our_member(github: GitHub) -> bool:
     if g.user_data is None:
         return False
     if g.user_data.github_orgs is None or \
-            GitHubOrgData(name='AlmaLinux') not in g.user_data.github_orgs:
+            GitHubOrgData(name=MAIN_ORGANIZATION) not in g.user_data.github_orgs:
         return False
     try:
         membership = github.get(
@@ -241,3 +245,23 @@ def raise_for_status(response: TestResponse):
             url=response.request.base_url,
             status_code=response.status_code,
         )
+
+
+def get_user_organizations(add_specific: bool = True) -> list[str]:
+    user_data = g.user_data  # type: UserData
+    if user_data and GitHubOrgData(name=MAIN_ORGANIZATION) in \
+            user_data.github_orgs:
+        with session_scope() as db_session:
+            orgs = [org.to_dataclass().name for org in
+                    GitHubOrg.search_by_dataclass(
+                session=db_session,
+                github_org_data=GitHubOrgData(),
+                only_one=False,
+            )]
+        if add_specific:
+            orgs = [GLOBAL_ORGANIZATION] + orgs
+    elif add_specific:
+        orgs = [MAIN_ORGANIZATION] + [org.name for org in user_data.github_orgs]
+    else:
+        orgs = [org.name for org in user_data.github_orgs]
+    return orgs
