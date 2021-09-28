@@ -1,7 +1,10 @@
 # coding=utf-8
 from __future__ import annotations
 
+import json
 from typing import List, Optional, Union
+
+from flask import g
 from sqlalchemy_pagination import paginate, Page
 from api.exceptions import DBRecordNotFound
 from db.data_models import (
@@ -11,7 +14,7 @@ from db.data_models import (
     PackageType,
     ModuleStreamData,
     ReleaseData,
-    UserData, GitHubOrgData,
+    UserData, GitHubOrgData, ActionHistoryData, DataClassesJSONEncoder,
 )
 from sqlalchemy import (
     Column,
@@ -35,6 +38,229 @@ from common.sentry import (
 logger = get_logger(__name__)
 
 Base = declarative_base()
+
+
+users_github_orgs = Table(
+    'users_github_orgs',
+    Base.metadata,
+    Column(
+        'user_id', Integer, ForeignKey(
+            'users.id',
+            ondelete='CASCADE',
+        ),
+    ),
+    Column(
+        'github_org_id', Integer, ForeignKey(
+            'github_orgs.id',
+            ondelete='CASCADE',
+        )
+    ),
+)
+
+
+class GitHubOrg(Base):
+    __tablename__ = 'github_orgs'
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+
+    @staticmethod
+    def search_by_dataclass(
+            session: Session,
+            github_org_data: GitHubOrgData,
+            only_one: bool,
+    ) -> Union[List[GitHubOrg], GitHubOrg]:
+        query = session.query(GitHubOrg).filter_by(
+            **github_org_data.to_dict(),
+        )
+        if only_one:
+            return query.one_or_none()
+        else:
+            return query.all()
+
+    def to_dataclass(self) -> GitHubOrgData:
+        return GitHubOrgData(
+            name=self.name,
+        )
+
+    @staticmethod
+    def create_from_dataclass(
+            session: Session,
+            github_org_data: GitHubOrgData,
+    ) -> GitHubOrg:
+        github_org = session.query(GitHubOrg).filter_by(
+            **github_org_data.to_dict(),
+        ).one_or_none()
+        if github_org is None:
+            github_org = GitHubOrg(
+                **github_org_data.to_dict(),
+            )
+            session.add(github_org)
+            session.flush()
+        return github_org
+
+
+class User(Base):
+    __tablename__ = 'users'
+
+    id = Column(Integer, primary_key=True)
+    github_access_token = Column(String)
+    github_id = Column(Integer)
+    github_login = Column(String)
+    github_orgs = relationship(
+        'GitHubOrg',
+        secondary=users_github_orgs,
+        passive_deletes=True,
+        backref='users',
+    )
+
+    @staticmethod
+    def search_by_dataclass(
+            session: Session,
+            user_data: UserData,
+            only_one: bool,
+            page_size: int = None,
+            page: int = None,
+    ) -> Union[List[User], User]:
+        orgs = []
+        if user_data.github_orgs is not None:
+            orgs = [
+                GitHubOrg.search_by_dataclass(
+                    session=session,
+                    github_org_data=org,
+                    only_one=True,
+                ) for org in user_data.github_orgs
+            ]
+        query = session.query(User).filter_by(
+            **user_data.to_dict(),
+        )
+        if orgs:
+            query = query.filter(
+                User.github_orgs.any(
+                    GitHubOrg.id.in_(
+                        org.id for org in orgs
+                    )
+                ),
+            )
+        if page_size is None or page is None:
+            if only_one:
+                return query.one_or_none()
+            else:
+                return query.all()
+        else:
+            result = paginate(query, page=page, page_size=page_size)
+        return result
+
+    @staticmethod
+    def create_from_dataclass(
+            session: Session,
+            user_data: UserData,
+    ) -> User:
+        user = session.query(User).filter_by(
+            **user_data.to_dict(),
+        ).one_or_none()
+        github_orgs = [
+            GitHubOrg.create_from_dataclass(
+                session=session,
+                github_org_data=github_org_data,
+            ) for github_org_data in user_data.github_orgs
+        ]
+        if user is None:
+            user = User(
+                **user_data.to_dict()
+            )
+            user.github_orgs = github_orgs
+            session.add(user)
+        user.github_access_token = user_data.github_access_token
+        session.flush()
+        return user
+
+    def to_dataclass(self) -> UserData:
+        return UserData(
+            github_access_token=self.github_access_token,
+            github_id=self.github_id,
+            github_login=self.github_login,
+            github_orgs=[
+                github_org.to_dataclass() for github_org in self.github_orgs
+            ],
+        )
+
+
+class ActionHistory(Base):
+    __tablename__ = 'actions_history'
+
+    id = Column(Integer, primary_key=True)
+    action_before = Column(String, nullable=True)
+    action_after = Column(String, nullable=True)
+    history_type = Column(String, nullable=False)
+    username = Column(String, nullable=False)
+    action_id = Column(Integer, nullable=False)
+
+    @staticmethod
+    def search_by_dataclass(
+            session: Session,
+            action_history_data: ActionHistoryData,
+            only_one: bool,
+            page_size: int = None,
+            page: int = None,
+    ) -> Union[List[ActionHistory], ActionHistory]:
+        query = session.query(ActionHistory).filter_by(
+            **action_history_data.to_dict(),
+        )
+        if page_size is None or page is None:
+            if only_one:
+                return query.one_or_none()
+            else:
+                return query.all()
+        else:
+            result = paginate(query, page=page, page_size=page_size)
+        return result
+
+    @staticmethod
+    def get_history_by_action_id(
+            session: Session,
+            action_id: int,
+            page_size: int = None,
+            page: int = None,
+    ) -> List[ActionHistory]:
+        query = session.query(ActionHistory).filter_by(action_id=action_id)
+        if page_size is None or page is None:
+            return query.all()
+        else:
+            return paginate(query, page=page, page_size=page_size)
+
+    @staticmethod
+    def get_history_by_username(
+            session: Session,
+            username: str,
+            page_size: int = None,
+            page: int = None,
+    ) -> List[ActionHistoryData]:
+        query = session.query(ActionHistory).filter_by(username=username)
+        if page_size is None or page is None:
+            return query.all()
+        else:
+            return paginate(query, page=page, page_size=page_size)
+
+    @staticmethod
+    def create_from_dataclass(
+            session: Session,
+            action_history_data: ActionHistoryData,
+    ) -> ActionHistory:
+        action_history = ActionHistory(
+            **action_history_data.to_dict(),
+        )
+        session.add(action_history)
+        session.flush()
+        return action_history
+
+    def to_dataclass(self) -> ActionHistoryData:
+        return ActionHistoryData(
+            action_before=self.action_before,
+            action_after=self.action_after,
+            history_type=self.history_type,
+            username=self.username,
+            action_id=self.action_id,
+        )
 
 
 class ModuleStream(Base):
@@ -280,6 +506,24 @@ class Action(Base):
             action_data: ActionData,
             session: Session,
     ) -> None:
+        action_before = session.query(Action).get(
+            action_data.id
+        )  # type: Action
+        user_data = g.user_data
+        ActionHistory.create_from_dataclass(
+            session=session,
+            action_history_data=ActionHistoryData(
+                action_before=json.dumps(
+                    action_before.to_dataclass(),
+                    cls=DataClassesJSONEncoder,
+                    indent=4,
+                    sort_keys=True,
+                ),
+                history_type='delete',
+                username=user_data.github_login,
+                action_id=action_before.id,
+            ),
+        )
         session.query(Action).filter(
             Action.id == action_data.id,
         ).delete(synchronize_session='fetch')
@@ -334,6 +578,7 @@ class Action(Base):
             session=session,
         )
         action = session.query(Action).get(action_data.id)
+        action_before = action.to_dataclass()
         if action is None:
             raise DBRecordNotFound(
                 'Action by ID "%s" is not found',
@@ -357,12 +602,35 @@ class Action(Base):
         session.query(ModuleStream).filter(
             ~ModuleStream.packages.any(),
         ).delete(synchronize_session='fetch')
+        session.flush()
+        session.refresh(action)
+        user_data = g.user_data  # type: User
+        ActionHistory.create_from_dataclass(
+            session=session,
+            action_history_data=ActionHistoryData(
+                action_before=json.dumps(
+                    action_before,
+                    cls=DataClassesJSONEncoder,
+                    indent=4,
+                    sort_keys=True,
+                ),
+                action_after=json.dumps(
+                    action.to_dataclass(),
+                    cls=DataClassesJSONEncoder,
+                    indent=4,
+                    sort_keys=True,
+                ),
+                history_type='modify',
+                username=user_data.github_login,
+                action_id=action.id,
+            ),
+        )
 
     @staticmethod
     def create_from_dataclass(
             action_data: ActionData,
             session: Session,
-    ):
+    ) -> Action:
         in_package_set = [Package.create_from_dataclass(
             package_data=in_package,
             session=session,
@@ -401,15 +669,33 @@ class Action(Base):
                 out_package_set=out_package_set,
             )
             session.add(action)
+            session.flush()
+            session.refresh(action)
+            user_data = g.user_data  # type: User
+            ActionHistory.create_from_dataclass(
+                session=session,
+                action_history_data=ActionHistoryData(
+                    action_after=json.dumps(
+                        action.to_dataclass(),
+                        cls=DataClassesJSONEncoder,
+                        indent=4,
+                        sort_keys=True,
+                    ),
+                    history_type='create',
+                    username=user_data.github_login,
+                    action_id=action.id,
+                ),
+            )
         return action
 
     @staticmethod
     def search_by_dataclass(
             action_data: ActionData,
             session: Session,
+            only_one: bool = False,
             page_size: int = None,
             page: int = None,
-    ) -> Optional[Union[List[Action], Page]]:
+    ) -> Optional[Union[List[Action], Page, Action]]:
         if action_data.is_empty:
             return None
         in_package_set = []
@@ -468,117 +754,10 @@ class Action(Base):
                 ),
             )
         if page_size is None or page is None:
-            result = action_query.all()
+            if only_one:
+                result = action_query.one_or_none()
+            else:
+                result = action_query.all()
         else:
             result = paginate(action_query, page=page, page_size=page_size)
         return result
-
-
-users_github_orgs = Table(
-    'users_github_orgs',
-    Base.metadata,
-    Column(
-        'user_id', Integer, ForeignKey(
-            'users.id',
-            ondelete='CASCADE',
-        ),
-    ),
-    Column(
-        'github_org_id', Integer, ForeignKey(
-            'github_orgs.id',
-            ondelete='CASCADE',
-        )
-    ),
-)
-
-
-class GitHubOrg(Base):
-    __tablename__ = 'github_orgs'
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-
-    @staticmethod
-    def search_by_dataclass(session: Session, github_org_data: GitHubOrgData):
-        return session.query(GitHubOrg).filter_by(
-            **github_org_data.to_dict(),
-        ).all()
-
-    def to_dataclass(self) -> GitHubOrgData:
-        return GitHubOrgData(
-            name=self.name,
-        )
-
-    @staticmethod
-    def create_from_dataclass(
-            session: Session,
-            github_org_data: GitHubOrgData,
-    ):
-        github_org = session.query(GitHubOrg).filter_by(
-            **github_org_data.to_dict(),
-        ).one_or_none()
-        if github_org is None:
-            github_org = GitHubOrg(
-                **github_org_data.to_dict(),
-            )
-            session.add(github_org)
-            session.flush()
-        return github_org
-
-
-class User(Base):
-    __tablename__ = 'users'
-
-    id = Column(Integer, primary_key=True)
-    github_access_token = Column(String)
-    github_id = Column(Integer)
-    github_login = Column(String)
-    github_orgs = relationship(
-        'GitHubOrg',
-        secondary=users_github_orgs,
-        passive_deletes=True,
-        backref='users',
-    )
-
-    @staticmethod
-    def search_by_dataclass(
-            session: Session,
-            user_data: UserData,
-            only_one: bool,
-    ):
-        query = session.query(User).filter_by(
-            **user_data.to_dict(),
-        )
-        if only_one:
-            return query.one_or_none()
-        else:
-            return query.all()
-
-    @staticmethod
-    def create_from_dataclass(session: Session, user_data: UserData):
-        user = session.query(User).filter_by(
-            **user_data.to_dict(),
-        ).one_or_none()
-        github_orgs = [
-            GitHubOrg.create_from_dataclass(
-                session=session,
-                github_org_data=github_org_data,
-            ) for github_org_data in user_data.github_orgs
-        ]
-        if user is None:
-            user = User(
-                **user_data.to_dict()
-            )
-            user.github_orgs = github_orgs
-            session.add(user)
-            session.flush()
-        return user
-
-    def to_dataclass(self) -> UserData:
-        return UserData(
-            github_access_token=self.github_access_token,
-            github_id=self.github_id,
-            github_login=self.github_login,
-            github_orgs=[
-                github_org.to_dataclass() for github_org in self.github_orgs
-            ],
-        )

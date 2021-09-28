@@ -15,6 +15,7 @@ from api.exceptions import (
     BadRequestFormatExceptioin, CustomHTTPError,
 )
 from common.sentry import get_logger
+from db.data_models import GitHubOrgData
 from db.json_schemas import json_schema_mapping
 from flask import (
     Response,
@@ -143,7 +144,7 @@ def is_our_member(github: GitHub) -> bool:
     if g.user_data is None:
         return False
     if g.user_data.github_orgs is None or \
-            'AlmaLinux' not in g.user_data.github_orgs:
+            GitHubOrgData(name='AlmaLinux') not in g.user_data.github_orgs:
         return False
     try:
         membership = github.get(

@@ -33,8 +33,12 @@
                         <span class="material-icons delete-icon linkable-element" data-action-id="{{ action.id }}" data-toggle="tooltip" data-placement="top" title="Delete this action">delete</span>
                     {% endif %}
                     &nbsp;
-                    <a href="{{ url_for('view_action', action_id=action.id) }}" class="icon-link">
+                    <a href="{{ url_for('view_action', action_id=action.id) }}" class="icon-link" data-toggle="tooltip" data-placement="top" title="View this action">
                         <span class="material-icons view-icon" data-toggle="tooltip" data-placement="top" title="View this action">visibility</span>
+                    </a>
+                    &nbsp;
+                    <a href="{{ url_for('get_history', action_id=action.id) }}" class="icon-link" data-toggle="tooltip" data-placement="top" title="View history of this action">
+                        <span class="material-icons history-icon">history</span>
                     </a>
                 </td>
                 <td rowspan="{{ action.packages | length }}">

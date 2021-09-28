@@ -1,0 +1,31 @@
+{% extends "main.html" %}
+
+{% block table %}
+    {{ super() }}
+    {% include "snipets/pagination.html" %}
+    <table id="dtBasic" class="table table-borderless text-center align-middle table-responsive-lg" data-order='[[ 0, "asc" ]]'>
+        <thead>
+            <tr>
+                <th>Type</th>
+                <th>Username</th>
+                <th>Action ID</th>
+                <th>Action before</th>
+                <th>Action after</th>
+            </tr>
+        </thead>
+        <tbody class="table-bordered">
+        {% for action_history in actions_history %}
+            <tr>
+                <td>{{ action_history.history_type }}</td>
+                <td><a href="https://github.com/{{ action_history.username }}">{{ action_history.username }}</a></td>
+                <td><a href="{{ url_for('view_action', action_id=action_history.action_id) }}">{{ action_history.action_id }}</a></td>
+                <td><pre>{{ action_history.action_before }}</pre></td>
+                <td><pre>{{ action_history.action_after }}</pre></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <a href="{{ url_for('get_list_actions') }}">Back to the list</a>
+    <br>
+    {% include "snipets/pagination.html" %}
+{% endblock table %}

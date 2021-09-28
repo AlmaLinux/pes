@@ -142,6 +142,16 @@ class BaseData:
 
 
 @dataclass
+class ActionHistoryData(BaseData):
+
+    action_before: str = None
+    action_after: str = None
+    history_type: str = None
+    username: str = None
+    action_id: int = None
+
+
+@dataclass
 class GitHubOrgData(BaseData):
     name: str = None
 
@@ -151,6 +161,7 @@ class UserData(BaseData):
 
     __skip_fields__ = (
         'github_orgs',
+        'github_access_token',
     )
 
     github_access_token: str = None

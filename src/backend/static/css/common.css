@@ -48,6 +48,9 @@ table.dataTable thead .sorting_desc_disabled:before {
 .icon-link {
     text-decoration: none !important;
 }
+.history-icon {
+    color: royalblue;
+}
 
 .action-removed {
     background-color: #f5c6cb

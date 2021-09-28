@@ -24,6 +24,18 @@ This is Package Evolution Service. It provides the information for migration fro
             <div class="col-lg">
                 <a href="{{ url_for('get_list_actions') }}">List actions</a>
             </div>
+            <div class="w-100"></div>
+            <div class="col-lg">
+                <hr style="width: 15%">
+            </div>
+            <div class="w-100"></div>
+            <div class="col-lg">
+                <a href="{{ url_for('get_users') }}">List of registered users</a>
+            </div>
+            <div class="w-100"></div>
+            <div class="col-lg">
+                <a href="{{ url_for('get_history') }}">Actions history</a>
+            </div>
         </div>
     </div>
 {% endblock table %}

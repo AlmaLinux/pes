@@ -12,9 +12,9 @@ from sqlalchemy_pagination import Page
 from api.exceptions import BadRequestFormatExceptioin
 from common.forms import AddAction
 from db.data_models import ActionData, ActionType, GENERIC_OS_NAME, UserData, \
-    GitHubOrgData
+    GitHubOrgData, ActionHistoryData
 from db.utils import session_scope
-from db.db_models import Action, User, GitHubOrg
+from db.db_models import Action, User, GitHubOrg, ActionHistory
 from flask_github import GitHub
 from common.sentry import (
     get_logger,
@@ -24,6 +24,9 @@ from flask import request, url_for, session, g
 from werkzeug.test import TestResponse
 
 logger = get_logger(__name__)
+
+
+PAGE_SIZE = 20
 
 
 def before_request_handler():
@@ -73,7 +76,6 @@ def push_action(action_data: ActionData) -> None:
             action_data=action_data,
             session=db_session,
         )
-        db_session.flush()
 
 
 def get_actions(
@@ -99,7 +101,6 @@ def modify_action(action_data: ActionData) -> None:
             action_data=action_data,
             session=db_session,
         )
-        db_session.flush()
 
 
 def dump_pes_json(source_release: str, target_release: str):
@@ -280,7 +281,10 @@ def add_or_edit_action_handler(add_action_form: AddAction, is_new: bool) -> None
     raise_for_status(response)
 
 
-def get_actions_handler(page, page_size=20) -> Tuple[List[ActionData], Page]:
+def get_actions_handler(
+        page: int,
+        page_size: int = PAGE_SIZE,
+) -> Tuple[List[ActionData], Page]:
     with session_scope() as db_session:
         pagination = Action.search_by_dataclass(
             action_data=ActionData(is_approved=None),
@@ -297,13 +301,16 @@ def get_actions_handler(page, page_size=20) -> Tuple[List[ActionData], Page]:
     return actions, pagination
 
 
-def get_action_handler(action_id: int) -> ActionData:
+def get_action_handler(action_id: int) -> Optional[ActionData]:
     with session_scope() as db_session:
         actions = Action.search_by_dataclass(
             action_data=ActionData(id=action_id, is_approved=None),
             session=db_session,
         )
-        action = actions[0].to_dataclass()
+        if actions:
+            action = actions[0].to_dataclass()
+        else:
+            return
     setattr(action, 'packages', list(zip_longest(
         action.in_package_set,
         action.out_package_set,
@@ -320,3 +327,60 @@ def approve_pull_request(data: dict[str, int]):
         action = actions[0]
         action.is_approved = True
         db_session.flush()
+
+
+def get_users_handler(
+        page: int,
+        page_size: int = PAGE_SIZE,
+) -> Tuple[List[ActionData], Page]:
+    with session_scope() as db_session:
+        user_data = g.user_data  # type: UserData
+        pagination = User.search_by_dataclass(
+            session=db_session,
+            user_data=UserData(
+                github_orgs=None if session.get('is_our_member', False)
+                else user_data.github_orgs,
+            ),
+            only_one=False,
+            page_size=page_size,
+            page=page,
+        )
+        users = [user.to_dataclass() for user in pagination.items]
+        return users, pagination
+
+
+def get_history_handler(
+        page: int,
+        action_history_data: ActionHistoryData = ActionHistoryData(),
+        action_id: int = None,
+        username: str = None,
+        page_size: int = PAGE_SIZE,
+) -> Tuple[List[ActionHistoryData], Page]:
+    with session_scope() as db_session:
+        if action_id is not None:
+            pagination = ActionHistory.get_history_by_action_id(
+                session=db_session,
+                action_id=action_id,
+                page_size=page_size,
+                page=page,
+            )
+        elif username is not None:
+            pagination = ActionHistory.get_history_by_username(
+                session=db_session,
+                username=username,
+                page_size=page_size,
+                page=page,
+            )
+        else:
+            pagination = ActionHistory.search_by_dataclass(
+                session=db_session,
+                action_history_data=action_history_data,
+                only_one=False,
+                page_size=page_size,
+                page=page,
+            )
+        actions_history = [
+            action_history.to_dataclass() for action_history
+            in pagination.items
+        ]
+        return actions_history, pagination

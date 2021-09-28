@@ -18,7 +18,8 @@ from api.handlers import (
     dump_handler,
     authorized_handler,
     add_or_edit_action_handler, before_request_handler, get_actions_handler,
-    get_action_handler, approve_pull_request,
+    get_action_handler, approve_pull_request, get_users_handler,
+    get_history_handler,
 )
 from api.utils import (
     success_result,
@@ -71,6 +72,45 @@ def _prepare_data_dict() -> Dict[str, Union[str, bool]]:
 @app.before_request
 def before_request():
     before_request_handler()
+
+
+@github.access_token_getter
+def token_getter():
+    user_data = g.user_data
+    if user_data is not None:
+        return user_data.github_access_token
+
+
+@app.route('/github-callback')
+@github.authorized_handler
+def authorized(access_token):
+    next_url = session.pop('next_url', None) or url_for('index')
+    if access_token is None:
+        return redirect(next_url)
+    authorized_handler(access_token=access_token, github=github)
+    return redirect(next_url)
+
+
+@app.route(
+    '/login',
+    methods=('GET',),
+)
+def login():
+    if session.get('user_id', None) is None:
+        session.update({
+            'next_url': request.referrer,
+        })
+        return github.authorize(
+            scope='user:email read:org',
+        )
+    else:
+        return 'Already logged in'
+
+
+@app.route('/logout', methods=('GET',))
+@clear_sessions_fields_before_logout
+def logout():
+    return redirect(url_for('index'))
 
 
 @app.route('/')
@@ -193,43 +233,50 @@ def edit_action(action_id: int):
     return render_template('add_action.html', **data)
 
 
-@github.access_token_getter
-def token_getter():
-    user_data = g.user_data
-    if user_data is not None:
-        return user_data.github_access_token
+@app.route('/users', methods=('GET',))
+@app.route('/users/<int:page>', methods=('GET',))
+@login_requires
+def get_users(page: int = 1):
+    list_users, pagination = get_users_handler(page=page)
+    setattr(pagination, 'page', page)
+    data = {
+        'main_title': 'List of registered users',
+        'users': list_users,
+        'pagination': pagination,
+    }
+    data.update(_prepare_data_dict())
+
+    return render_template('users.html', **data)
 
 
-@app.route('/github-callback')
-@github.authorized_handler
-def authorized(access_token):
-    next_url = session.pop('next_url', None) or url_for('index')
-    if access_token is None:
-        return redirect(next_url)
-    authorized_handler(access_token=access_token, github=github)
-    return redirect(next_url)
-
-
-@app.route(
-    '/login',
-    methods=('GET',),
-)
-def login():
-    if session.get('user_id', None) is None:
-        session.update({
-            'next_url': request.referrer,
-        })
-        return github.authorize(
-            scope='user:email read:org',
-        )
+@app.route('/history', methods=('GET',))
+@app.route('/history/<int:page>', methods=('GET',))
+@app.route('/history_by_action/<int:action_id>', methods=('GET',))
+@app.route('/history_by_action/<int:action_id>/<int:page>', methods=('GET',))
+@app.route('/history_by_user/<string:username>', methods=('GET',))
+@app.route('/history_by_user/<string:username>/<int:page>', methods=('GET',))
+@login_requires
+def get_history(page: int = 1, action_id: int = None, username: str = None):
+    list_actions_history, pagination = get_history_handler(
+        page=page,
+        action_id=action_id,
+        username=username,
+    )
+    setattr(pagination, 'page', page)
+    if action_id is not None:
+        main_title = f'History of action #{action_id}'
+    elif username is not None:
+        main_title = f'History of changes made by user {username}'
     else:
-        return 'Already logged in'
+        main_title = 'Actions history'
+    data = {
+        'main_title': main_title,
+        'actions_history': list_actions_history,
+        'pagination': pagination,
+    }
+    data.update(_prepare_data_dict())
 
-
-@app.route('/logout', methods=('GET',))
-@clear_sessions_fields_before_logout
-def logout():
-    return redirect(url_for('index'))
+    return render_template('history.html', **data)
 
 
 @app.route(

@@ -1,0 +1,32 @@
+{% extends "main.html" %}
+
+{% block table %}
+    {{ super() }}
+    {% include "snipets/pagination.html" %}
+    <table id="dtBasic" class="table table-borderless text-center align-middle table-responsive-lg" data-order='[[ 0, "asc" ]]'>
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>GitHub organizations</th>
+                <th>History of changes made by user</th>
+            </tr>
+        </thead>
+        <tbody class="table-bordered">
+        {% for user in users %}
+            <tr>
+                <td><a href="https://github.com/{{ user.github_login }}">{{ user.github_login }}</a></td>
+                <td>
+                    <ul>
+                        {% for org in user.github_orgs %}
+                            <li><a href="https://github.com/{{ org.name }}">{{ org.name }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </td>
+                <td><a href="{{ url_for('get_history', username=user.github_login) }}">History of changes</a></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <br>
+    {% include "snipets/pagination.html" %}
+{% endblock table %}
