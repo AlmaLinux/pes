@@ -4,3 +4,4 @@ mirrors/*
 ci/ansible/inventory/*
 !ci/ansible/inventory/template
 pes.db
+src/backend/db/dbmigrations/tmp_versions

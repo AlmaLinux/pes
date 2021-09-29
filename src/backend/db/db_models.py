@@ -700,9 +700,11 @@ class Action(Base):
             only_one: bool = False,
             page_size: int = None,
             page: int = None,
+            params: dict = None,
     ) -> Optional[Union[List[Action], Page, Action]]:
         if action_data.is_empty:
             return None
+        package_name = (params or {}).get('package', None)
         in_package_set = []
         for in_package in action_data.in_package_set:
             in_package_set.extend(Package.search_by_dataclass(
