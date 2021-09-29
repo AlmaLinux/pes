@@ -41,3 +41,22 @@ $(document).ready(function($) {
         }
     });
 });
+
+// search the actions by a package name
+$(document).ready(function($){
+    const searchActionInput = $('.search-action');
+    const searchText =  $(this).val();
+    searchActionInput.bind('searchAction', function(e) {
+        if(searchText) {
+            window.document.location = '/actions?package=' + $(this).val();
+        } else {
+            window.document.location = '/actions';
+        }
+
+    });
+    searchActionInput.keypress(function(e) {
+        if (e.keyCode === 13) {
+            $(this).trigger('searchAction');
+        }
+    });
+});

@@ -7,14 +7,14 @@ from typing import (
     Optional, Union, Tuple, Dict,
 )
 
-from sqlalchemy_pagination import Page
+from sqlalchemy_pagination import Page, paginate
 
 from api.exceptions import BadRequestFormatExceptioin
 from common.forms import AddAction
 from db.data_models import ActionData, ActionType, GENERIC_OS_NAME, UserData, \
     GitHubOrgData, ActionHistoryData, GLOBAL_ORGANIZATION
 from db.utils import session_scope
-from db.db_models import Action, User, GitHubOrg, ActionHistory
+from db.db_models import Action, User, GitHubOrg, ActionHistory, Package
 from flask_github import GitHub
 from common.sentry import (
     get_logger,
@@ -321,6 +321,41 @@ def get_actions_handler(
             page=page,
             page_size=page_size,
         )
+        actions = [action.to_dataclass() for action in pagination.items]
+    for action in actions:
+        setattr(action, 'packages', list(zip_longest(
+            action.in_package_set,
+            action.out_package_set,
+        )))
+    return actions, pagination
+
+
+def search_actions_handler(
+        params: dict,
+        page: int,
+        page_size: int = PAGE_SIZE,
+) -> Tuple[List[ActionData], Page]:
+    with session_scope() as db_session:
+        package_name = params.get('package')
+        packages = db_session.query(Package).filter(
+            Package.name.like(f'%{package_name}%')
+        ).all()
+        query_actions_1 = db_session.query(Action).filter(
+            Action.in_package_set.any(
+                Package.id.in_(
+                    pkg.id for pkg in packages
+                )
+            )
+        )
+        query_actions_2 = db_session.query(Action).filter(
+            Action.out_package_set.any(
+                Package.id.in_(
+                    pkg.id for pkg in packages
+                )
+            )
+        )
+        total_query = query_actions_1.union(query_actions_2)
+        pagination = paginate(total_query, page=page, page_size=page_size)
         actions = [action.to_dataclass() for action in pagination.items]
     for action in actions:
         setattr(action, 'packages', list(zip_longest(

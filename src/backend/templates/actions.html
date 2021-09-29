@@ -2,9 +2,19 @@
 
 {% block table %}
     {{ super() }}
-    {% include "snipets/pagination.html" %}
+    <div class="d-flex flex-row justify-content-between">
+        <div>{% include "snipets/pagination.html" %}</div>
+    </div>
     <table id="dtBasic" class="table table-borderless text-center align-middle table-responsive-lg" data-order='[[ 0, "asc" ]]'>
         <thead>
+            <tr>
+                <th colspan="10" style="text-align: right !important;">
+                    <label>
+                        <input type="text" class="form-control search-action" placeholder="Search by package name" value="{{ search_value }}">
+                    </label>
+                </th>
+
+            </tr>
             <tr>
                 <th rowspan="2"></th>
                 <th rowspan="2">Is approved</th>

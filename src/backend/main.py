@@ -3,6 +3,8 @@ import json
 from typing import Union, Dict
 
 from requests import RequestException
+from webargs import fields
+from webargs.flaskparser import use_args
 
 from api.exceptions import (
     BaseCustomException,
@@ -19,7 +21,7 @@ from api.handlers import (
     authorized_handler,
     add_or_edit_action_handler, before_request_handler, get_actions_handler,
     get_action_handler, approve_pull_request, get_users_handler,
-    get_history_handler,
+    get_history_handler, search_actions_handler,
 )
 from api.utils import (
     success_result,
@@ -60,11 +62,17 @@ logger = get_logger(__name__)
 github = GitHub(app)
 
 
+GET_ACTIONS_ARGS = {
+    'package': fields.String()
+}
+
+
 def _prepare_data_dict() -> Dict[str, Union[str, bool]]:
     data = {
         'logged': bool(g.user_data),
         'username': g.user_data.github_login if g.user_data else None,
         'is_our_member': session.get('is_our_member', False),
+        'url_args': {},
     }
     return data
 
@@ -314,16 +322,27 @@ def actions():
 
 @app.route('/actions', methods=('GET',))
 @app.route('/actions/<int:page>', methods=('GET',))
-def get_list_actions(page: int = 1):
+@use_args(GET_ACTIONS_ARGS, location='query')
+def get_list_actions(url_args, page: int = 1):
 
-    list_actions, pagination = get_actions_handler(page=page)
-    setattr(pagination, 'page', page)
     data = {
         'main_title': 'List of actions',
-        'actions': list_actions,
-        'pagination': pagination,
+        'search_value': url_args.get('package', ''),
     }
     data.update(_prepare_data_dict())
+    data['url_args'] = url_args
+    if url_args:
+        list_actions, pagination = search_actions_handler(
+            params=url_args,
+            page=page,
+        )
+    else:
+        list_actions, pagination = get_actions_handler(page=page)
+    data.update({
+        'actions': list_actions,
+        'pagination': pagination,
+    })
+    setattr(pagination, 'page', page)
 
     return render_template('actions.html', **data)
 
