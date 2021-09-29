@@ -45,9 +45,8 @@ $(document).ready(function($) {
 // search the actions by a package name
 $(document).ready(function($){
     const searchActionInput = $('.search-action');
-    const searchText =  $(this).val();
     searchActionInput.bind('searchAction', function(e) {
-        if(searchText) {
+        if($(this).val()) {
             window.document.location = '/actions?package=' + $(this).val();
         } else {
             window.document.location = '/actions';

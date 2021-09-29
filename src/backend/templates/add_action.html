@@ -133,7 +133,10 @@
                         &nbsp;
                     </div>
                     <div class="col-sm">
-                        <input type="submit" value="{{ saving_button_name }}">
+                        <button class="btn btn-primary submit-button" type="submit">
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none"></span>
+                            <span class="sr-only submit-button-text" data-send-text="Processing...">{{ saving_button_name }}</span>
+                        </button>
                     </div>
                 </div>
             </div>
