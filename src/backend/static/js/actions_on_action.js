@@ -45,6 +45,12 @@ $(document).ready(function($) {
 // search the actions by a package name
 $(document).ready(function($){
     const searchActionInput = $('.search-action');
+    const clearSearchBtn = $('.clear-search-btn');
+    if (searchActionInput.val()) {
+        clearSearchBtn.show()
+    } else {
+        clearSearchBtn.hide()
+    }
     searchActionInput.bind('searchAction', function(e) {
         if($(this).val()) {
             window.document.location = '/actions?package=' + $(this).val();
@@ -57,5 +63,9 @@ $(document).ready(function($){
         if (e.keyCode === 13) {
             $(this).trigger('searchAction');
         }
+    });
+    clearSearchBtn.click(function (){
+        searchActionInput.text('');
+        window.document.location = '/actions';
     });
 });
