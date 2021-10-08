@@ -43,8 +43,9 @@ def init_sentry_client(dsn: Optional[str] = None) -> None:
             FlaskIntegration(),
         ],
     )
-    with sentry_sdk.configure_scope() as scope:
-        scope.set_tag('aws_instance_ip', get_aws_instance_api())
+    if not os.getenv('SKIP_AWS_CHECKING'):
+        with sentry_sdk.configure_scope() as scope:
+            scope.set_tag('aws_instance_ip', get_aws_instance_api())
 
 
 def get_logger(logger_name: str):

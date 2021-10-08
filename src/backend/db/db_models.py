@@ -15,6 +15,7 @@ from db.data_models import (
     ModuleStreamData,
     ReleaseData,
     UserData, GitHubOrgData, ActionHistoryData, DataClassesJSONEncoder,
+    TIME_FORMAT_STRING,
 )
 from sqlalchemy import (
     Column,
@@ -25,6 +26,7 @@ from sqlalchemy import (
     Boolean,
     Enum,
     null,
+    DateTime, func,
 )
 from sqlalchemy.exc import MultipleResultsFound
 from sqlalchemy.ext.declarative import declarative_base
@@ -196,6 +198,7 @@ class ActionHistory(Base):
     history_type = Column(String, nullable=False)
     username = Column(String, nullable=False)
     action_id = Column(Integer, nullable=False)
+    timestamp = Column(DateTime, nullable=False, onupdate=func.now())
 
     @staticmethod
     def search_by_dataclass(
@@ -262,6 +265,7 @@ class ActionHistory(Base):
             history_type=self.history_type,
             username=self.username,
             action_id=self.action_id,
+            timestamp=self.timestamp.strftime(TIME_FORMAT_STRING),
         )
 
 
@@ -596,6 +600,8 @@ class Action(Base):
         action.in_package_set = in_package_set
         action.out_package_set = out_package_set
         action.version += 1
+        session.flush()
+        session.refresh(action)
         session.query(Release).filter(
             ~Release.actions_target.any(),
             ~Release.actions_source.any(),

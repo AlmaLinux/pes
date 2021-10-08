@@ -11,6 +11,7 @@
                 <th>Action ID</th>
                 <th>Action before</th>
                 <th>Action after</th>
+                <th>Timestamp</th>
             </tr>
         </thead>
         <tbody class="table-bordered">
@@ -21,11 +22,15 @@
                 <td><a href="{{ url_for('view_action', action_id=action_history.action_id) }}">{{ action_history.action_id }}</a></td>
                 <td><pre>{{ action_history.action_before }}</pre></td>
                 <td><pre>{{ action_history.action_after }}</pre></td>
+                <td><pre>{{ action_history.timestamp }}</pre></td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
     <a href="{{ url_for('get_list_actions') }}">Back to the list</a>
+    {% if action_id %}
+        <br><a href="{{ url_for('view_action', action_id=action_id) }}">Back to the action</a>
+    {% endif %}
     <br>
     {% include "snipets/pagination.html" %}
 {% endblock table %}
