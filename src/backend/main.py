@@ -285,6 +285,7 @@ def get_history(page: int = 1, action_id: int = None, username: str = None):
         'main_title': main_title,
         'actions_history': list_actions_history,
         'pagination': pagination,
+        'action_id': action_id,
     }
     data.update(_prepare_data_dict())
 

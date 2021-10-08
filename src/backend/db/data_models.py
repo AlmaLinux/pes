@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from datetime import datetime
 
 import flask
 import enum
@@ -16,6 +17,7 @@ from typing import List, Optional
 GENERIC_OS_NAME = 'generic'
 GLOBAL_ORGANIZATION = 'All'
 MAIN_ORGANIZATION = 'AlmaLinux'
+TIME_FORMAT_STRING = '%Y-%m-%d %H:%M:%S'
 
 
 ReposMapping = {
@@ -151,6 +153,21 @@ class ActionHistoryData(BaseData):
     history_type: str = None
     username: str = None
     action_id: int = None
+    timestamp: str = None
+
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+        if 'timestamp' not in kwargs:
+            self.timestamp = datetime.now().strftime(TIME_FORMAT_STRING)
+
+    def to_dict(self, force_included: list[str] = tuple()) -> dict:
+        data_dict = super().to_dict()
+        data_dict['timestamp'] = datetime.strptime(
+            data_dict['timestamp'],
+            TIME_FORMAT_STRING,
+        )
+        return data_dict
 
 
 @dataclass

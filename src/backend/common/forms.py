@@ -53,7 +53,6 @@ class Dump(FlaskForm):
 
 
 def release_version_validator(form, field: Field):
-    print(1)
     if field.data == '' and field.name in (
         'source_major_version',
         'source_minor_version',
