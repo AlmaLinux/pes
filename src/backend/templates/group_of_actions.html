@@ -1,0 +1,35 @@
+{% extends "main.html" %}
+
+{% block table %}
+    {{ super() }}
+    {% include "snipets/pagination.html" %}
+    <table id="dtBasic" class="table table-borderless text-center align-middle table-responsive-lg" data-order='[[ 0, "asc" ]]'>
+        <thead>
+            <tr>
+                <th></th>
+                <th>Name</th>
+                <th>Description</th>
+                <th>GitHub organization</th>
+            </tr>
+        </thead>
+        <tbody class="table-bordered">
+        {% for group in groups %}
+            <tr>
+                <td>
+                    {% if is_our_member %}
+                        <a href="{{ url_for('edit_group', group_id=group.id) }}" class="icon-link" data-toggle="tooltip" data-placement="top" title="Edit this group">
+                            <span class="material-icons edit-icon">edit</span>
+                        </a>
+{#                        <span class="material-icons delete-icon linkable-element" data-action-id="{{ action.id }}" data-toggle="tooltip" data-placement="top" title="Delete this action">delete</span>#}
+                    {% endif %}
+                </td>
+                <td>{{ group.name }}</td>
+                <td>{{ group.description }}</td>
+                <td>{{ group.github_org.name }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <br>
+    {% include "snipets/pagination.html" %}
+{% endblock table %}

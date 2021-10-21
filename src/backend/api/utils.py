@@ -247,10 +247,23 @@ def raise_for_status(response: TestResponse):
         )
 
 
-def get_user_organizations(add_specific: bool = True) -> list[str]:
+def get_user_organizations(
+        add_specific: bool = True,
+        only_self: bool = False
+) -> list[str]:
+    """
+    Return list of GH orgs for a currently logged user
+    :param add_specific: add admin organization (AlmaLinux) to the list
+    :param only_self: return list of orgs to which a user belongs
+    """
     user_data = g.user_data  # type: UserData
-    if user_data and GitHubOrgData(name=MAIN_ORGANIZATION) in \
-            user_data.github_orgs:
+    user_orgs = [] if user_data is None else user_data.github_orgs
+    def is_admin_org():
+        return not only_self and user_data and GitHubOrgData(
+            name=MAIN_ORGANIZATION
+        ) in user_data.github_orgs
+
+    if is_admin_org():
         with session_scope() as db_session:
             orgs = [org.to_dataclass().name for org in
                     GitHubOrg.search_by_dataclass(
@@ -261,7 +274,9 @@ def get_user_organizations(add_specific: bool = True) -> list[str]:
         if add_specific:
             orgs = [GLOBAL_ORGANIZATION] + orgs
     elif add_specific:
-        orgs = [MAIN_ORGANIZATION] + [org.name for org in user_data.github_orgs]
+        orgs = [MAIN_ORGANIZATION] + [
+            org.name for org in user_orgs
+        ]
     else:
-        orgs = [org.name for org in user_data.github_orgs]
+        orgs = [org.name for org in user_orgs]
     return orgs

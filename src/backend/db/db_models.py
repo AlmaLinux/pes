@@ -15,7 +15,7 @@ from db.data_models import (
     ModuleStreamData,
     ReleaseData,
     UserData, GitHubOrgData, ActionHistoryData, DataClassesJSONEncoder,
-    TIME_FORMAT_STRING,
+    TIME_FORMAT_STRING, GroupActionsData,
 )
 from sqlalchemy import (
     Column,
@@ -60,10 +60,136 @@ users_github_orgs = Table(
 )
 
 
+class GroupActions(Base):
+    __tablename__ = 'groups_actions'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    description = Column(String, nullable=False)
+    github_org_id = Column(
+        Integer,
+        ForeignKey(
+            'github_orgs.id',
+            ondelete='CASCADE',
+        ),
+        nullable=False,
+    )
+    github_org = relationship(
+        'GitHubOrg',
+        foreign_keys=[github_org_id],
+        passive_deletes=True,
+        backref='groups_actions',
+    )
+
+    @staticmethod
+    def search_by_github_orgs(
+            session: Session,
+            github_orgs: List[GitHubOrgData],
+            page_size: int = None,
+            page: int = None,
+    ):
+        query = session.query(GroupActions).filter(
+            GroupActions.github_org.has(
+                GitHubOrg.name.in_(
+                    github_org.name for github_org in github_orgs
+                )
+            )
+        )
+        if page is None or page_size is None:
+            return query.all()
+        else:
+            return paginate(query, page=page, page_size=page_size)
+
+    @staticmethod
+    def search_by_dataclass(
+            session: Session,
+            group_actions_data: GroupActionsData,
+            only_one: bool,
+    ) -> Union[List[GroupActions], GroupActions]:
+        query = session.query(GroupActions).filter_by(
+            **group_actions_data.to_dict(),
+        )
+        if group_actions_data.github_org is not None:
+            org = GitHubOrg.search_by_dataclass(
+                session=session,
+                github_org_data=group_actions_data.github_org,
+                only_one=True,
+            )
+        else:
+            org = None
+        query = query.filter_by(
+            github_org=org,
+        )
+        if only_one:
+            return query.one_or_none()
+        else:
+            return query.all()
+
+    def to_dataclass(self) -> GroupActionsData:
+        return GroupActionsData(
+            id=self.id,
+            name=self.name,
+            description=self.description,
+            github_org=self.github_org.to_dataclass(),
+        )
+
+    @staticmethod
+    def create_from_dataclass(
+            session: Session,
+            group_actions_data: GroupActionsData,
+    ) -> GroupActions:
+        query = session.query(GroupActions).filter_by(
+            **group_actions_data.to_dict(),
+        )
+        org = GitHubOrg.create_from_dataclass(
+            session=session,
+            github_org_data=group_actions_data.github_org,
+        )
+        query = query.filter_by(
+            github_org=org,
+        )
+        action_group = query.one_or_none()
+        if action_group is None:
+            action_group = GroupActions(
+                **group_actions_data.to_dict(),
+            )
+            action_group.github_org = org
+            action_group.github_org_id = org.id
+            session.add(action_group)
+            session.flush()
+        return action_group
+
+    @staticmethod
+    def update_from_dataclass(
+            session: Session,
+            group_actions_data: GroupActionsData,
+    ):
+        group_actions = session.query(GroupActions).get(group_actions_data.id)
+        org = GitHubOrg.create_from_dataclass(
+            session=session,
+            github_org_data=group_actions_data.github_org,
+        )
+        group_actions.github_org = org
+        group_actions.github_org_id = org.id
+        for key, value in group_actions_data.to_dict().items():
+            setattr(group_actions, key, value)
+        session.flush()
+
+    @staticmethod
+    def delete_by_dataclass(
+            session: Session,
+            group_actions_data: GroupActionsData,
+    ):
+        session.query(GroupActions).filter_by(
+            **group_actions_data.to_dict(force_included=['id']),
+        ).delete()
+
+
 class GitHubOrg(Base):
     __tablename__ = 'github_orgs'
+
     id = Column(Integer, primary_key=True)
-    name = Column(String)
+    name = Column(String, nullable=False)
 
     @staticmethod
     def search_by_dataclass(
@@ -124,7 +250,7 @@ class User(Base):
             only_one: bool,
             page_size: int = None,
             page: int = None,
-    ) -> Union[List[User], User]:
+    ) -> Union[List[User], User, Page]:
         orgs = []
         if user_data.github_orgs is not None:
             orgs = [
@@ -151,8 +277,7 @@ class User(Base):
             else:
                 return query.all()
         else:
-            result = paginate(query, page=page, page_size=page_size)
-        return result
+            return paginate(query, page=page, page_size=page_size)
 
     @staticmethod
     def create_from_dataclass(
@@ -207,7 +332,7 @@ class ActionHistory(Base):
             only_one: bool,
             page_size: int = None,
             page: int = None,
-    ) -> Union[List[ActionHistory], ActionHistory]:
+    ) -> Union[List[ActionHistory], ActionHistory, Page]:
         query = session.query(ActionHistory).filter_by(
             **action_history_data.to_dict(),
         )
@@ -226,7 +351,7 @@ class ActionHistory(Base):
             action_id: int,
             page_size: int = None,
             page: int = None,
-    ) -> List[ActionHistory]:
+    ) -> Union[List[ActionHistory], Page]:
         query = session.query(ActionHistory).filter_by(action_id=action_id)
         if page_size is None or page is None:
             return query.all()
@@ -239,7 +364,7 @@ class ActionHistory(Base):
             username: str,
             page_size: int = None,
             page: int = None,
-    ) -> List[ActionHistoryData]:
+    ) -> Union[List[ActionHistoryData], Page]:
         query = session.query(ActionHistory).filter_by(username=username)
         if page_size is None or page is None:
             return query.all()
@@ -470,6 +595,7 @@ class Action(Base):
     __tablename__ = 'actions'
 
     id = Column(Integer, nullable=False, primary_key=True)
+    description = Column(String, nullable=True)
     version = Column(Integer, nullable=False, default=1)
     is_approved = Column(Boolean, nullable=False, default=False)
     github_org = Column(String, nullable=True)
@@ -550,6 +676,7 @@ class Action(Base):
         return ActionData(
             id=self.id,
             version=self.version,
+            description=self.description,
             source_release=self.source_release.to_dataclass() if
             self.source_release else None,
             target_release=self.target_release.to_dataclass() if

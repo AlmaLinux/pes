@@ -21,6 +21,9 @@ put_action = {
         "org": {
             "type": "string",
         },
+        "description": {
+            "type": "string",
+        },
         "in_packageset": {
             "type": "object",
             "properties": {
@@ -172,6 +175,12 @@ get_actions = {
     "properties": {
         "id": {
             "type": "integer",
+        },
+        "org": {
+            "type": "string",
+        },
+        "description": {
+            "type": "string",
         },
         "action": {
             "type": "string",
@@ -343,6 +352,9 @@ post_action = {
     "properties": {
         "id": {
             "type": "integer",
+        },
+        "description": {
+            "type": "string",
         },
         "action": {
             "type": "string",

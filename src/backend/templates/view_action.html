@@ -35,6 +35,8 @@
                 {% endif %}
             </li>
             <li class="list-group-item"><b>Architectures:</b> {{ action.arches | join(', ') }}</li>
+            <li class="list-group-item"><b>GitHub organization:</b> {{ action.github_org }}</li>
+            <li class="list-group-item"><b>Description:</b> {{ action.description | default('', true) }}</li>
         </ul>
     {% else %}
         Action with same ID doesn't exist
@@ -65,7 +67,7 @@
                     <td>{{ in_package.name }}</td>
                     <td>{{ in_package.repository }}</td>
                     {% if in_package.module_stream %}
-                        <td>{{ in_package.module_stream.module }}:{{ in_package.module_stream.stream }}</td>
+                        <td>{{ in_package.module_stream.name }}:{{ in_package.module_stream.stream }}</td>
                     {% else %}
                         <td>-</td>
                     {% endif %}
@@ -76,7 +78,7 @@
                     <td>{{ out_package.name }}</td>
                     <td>{{ out_package.repository }}</td>
                     {% if out_package.module_stream %}
-                        <td>{{ out_package.module_stream.module }}:{{ out_package.module_stream.stream }}</td>
+                        <td>{{ out_package.module_stream.name }}:{{ out_package.module_stream.stream }}</td>
                     {% else %}
                         <td>-</td>
                     {% endif %}

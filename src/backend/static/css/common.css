@@ -73,3 +73,7 @@ table.dataTable thead .sorting_desc_disabled:before {
 .action-present {
     background-color: #F8F8FF
 }
+
+.left-json {
+    text-align: left !important;
+}

@@ -20,8 +20,8 @@
                 <td>{{ action_history.history_type }}</td>
                 <td><a href="https://github.com/{{ action_history.username }}">{{ action_history.username }}</a></td>
                 <td><a href="{{ url_for('view_action', action_id=action_history.action_id) }}">{{ action_history.action_id }}</a></td>
-                <td><pre>{{ action_history.action_before }}</pre></td>
-                <td><pre>{{ action_history.action_after }}</pre></td>
+                <td {{ 'class=left-json' if action_history.action_before else '' }}><pre>{{ action_history.action_before }}</pre></td>
+                <td {{ 'class=left-json' if action_history.action_after else '' }}><pre>{{ action_history.action_after }}</pre></td>
                 <td><pre>{{ action_history.timestamp }}</pre></td>
             </tr>
         {% endfor %}

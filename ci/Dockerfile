@@ -1,4 +1,4 @@
-FROM python:3 AS python38-uwsgi
+FROM python:3 AS python39-uwsgi
 COPY requirements.txt requirements.txt
 RUN pip install -U -r requirements.txt
 

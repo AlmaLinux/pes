@@ -22,6 +22,8 @@ from api.handlers import (
     add_or_edit_action_handler, before_request_handler, get_actions_handler,
     get_action_handler, approve_pull_request, get_users_handler,
     get_history_handler, search_actions_handler,
+    add_or_edit_group_of_actions_handler, get_groups_of_actions_handler,
+    get_group_of_actions_handler,
 )
 from api.utils import (
     success_result,
@@ -36,7 +38,7 @@ from api.utils import (
 from common.forms import (
     BulkUpload,
     Dump,
-    AddAction,
+    AddAction, AddGroupActions,
 )
 from common.sentry import (
     init_sentry_client,
@@ -104,7 +106,7 @@ def authorized(access_token):
     methods=('GET',),
 )
 def login():
-    if session.get('user_id', None) is None:
+    if session.get('github_id', None) is None:
         session.update({
             'next_url': request.referrer,
         })
@@ -190,14 +192,10 @@ def view_action(action_id: int):
     '/add_action',
     methods=('GET', 'POST',),
 )
-@app.route(
-    '/add_action/<int:action_id>',
-    methods=('GET', 'POST',),
-)
 @login_requires
-def add_action(action_id: int = None):
+def add_action():
     add_action_form = AddAction()
-    add_action_form.org.choices = get_user_organizations(add_specific=False)
+    add_action_form.org.choices = get_user_organizations(add_specific=True)
     data = {
         'main_title': 'Add an action',
         'form': add_action_form,
@@ -212,6 +210,33 @@ def add_action(action_id: int = None):
         )
         data['is_added'] = True
     return render_template('add_action.html', **data)
+
+
+@app.route(
+    '/add_group',
+    methods=('GET', 'POST',),
+)
+@login_requires
+def add_group():
+    add_group_form = AddGroupActions()
+    add_group_form.org.choices = get_user_organizations(
+        add_specific=False,
+        only_self=True,
+    )
+    data = {
+        'main_title': 'Add an group of actions',
+        'form': add_group_form,
+        'is_added': False,
+        'saving_button_name': 'Add group of actions',
+    }
+    data.update(_prepare_data_dict())
+    if add_group_form.validate_on_submit():
+        add_or_edit_group_of_actions_handler(
+            add_group_form=add_group_form,
+            is_new=True,
+        )
+        data['is_added'] = True
+    return render_template('add_group_of_actions.html', **data)
 
 
 @app.route(
@@ -245,6 +270,39 @@ def edit_action(action_id: int):
     return render_template('add_action.html', **data)
 
 
+@app.route(
+    '/edit_group/<int:group_id>',
+    methods=('GET', 'POST',),
+)
+@login_requires
+def edit_group(group_id: int):
+    edit_group_of_actions_form = AddGroupActions()
+    edit_group_of_actions_form.org.choices = get_user_organizations(
+        add_specific=False,
+        only_self=True,
+    )
+    group = get_group_of_actions_handler(group_id)
+    if request.method == 'GET':
+        edit_group_of_actions_form.load_from_dataclass(group)
+    data = {
+        'main_title': 'Edit an group of actions',
+        'form': edit_group_of_actions_form,
+        'is_added': False,
+        'saving_button_name': 'Save group of actions',
+    }
+    data.update(_prepare_data_dict())
+    if edit_group_of_actions_form.validate_on_submit():
+        add_or_edit_group_of_actions_handler(
+            add_group_form=edit_group_of_actions_form,
+            is_new=False,
+        )
+        data['is_added'] = True
+        data['group'] = get_group_of_actions_handler(group_id)
+        del data['main_title']
+        return redirect(url_for('get_group_of_actions'))
+    return render_template('add_group_of_actions.html', **data)
+
+
 @app.route('/users', methods=('GET',))
 @app.route('/users/<int:page>', methods=('GET',))
 @login_requires
@@ -259,6 +317,24 @@ def get_users(page: int = 1):
     data.update(_prepare_data_dict())
 
     return render_template('users.html', **data)
+
+
+@app.route('/group_of_actions', methods=('GET',))
+@app.route('/group_of_actions/<int:page>', methods=('GET',))
+@login_requires
+def get_group_of_actions(page: int = 1):
+    list_groups_of_actions, pagination = get_groups_of_actions_handler(
+        page=page
+    )
+    setattr(pagination, 'page', page)
+    data = {
+        'main_title': 'List of groups of actions',
+        'groups': list_groups_of_actions,
+        'pagination': pagination,
+    }
+    data.update(_prepare_data_dict())
+
+    return render_template('group_of_actions.html', **data)
 
 
 @app.route('/history', methods=('GET',))

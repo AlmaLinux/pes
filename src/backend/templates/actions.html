@@ -82,7 +82,7 @@
                         {% if in_package %}
                             <td>{{ in_package.name }}</td>
                             {% if in_package.module_stream %}
-                                <td>{{ in_package.module_stream.module }}:{{ in_package.module_stream.stream }}</td>
+                                <td>{{ in_package.module_stream.name }}:{{ in_package.module_stream.stream }}</td>
                             {% else %}
                                 <td>-</td>
                             {% endif %}
@@ -92,7 +92,7 @@
                         {% if out_package %}
                             <td>{{ out_package.name }}</td>
                             {% if out_package.module_stream %}
-                                <td>{{ out_package.module_stream.module }}:{{ out_package.module_stream.stream }}</td>
+                                <td>{{ out_package.module_stream.name }}:{{ out_package.module_stream.stream }}</td>
                             {% else %}
                                 <td>-</td>
                             {% endif %}

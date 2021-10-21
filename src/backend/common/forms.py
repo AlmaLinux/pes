@@ -3,7 +3,8 @@ from collections import defaultdict
 
 import wtforms.validators as validators
 
-from db.data_models import ActionType, ActionData, GENERIC_OS_NAME
+from db.data_models import ActionType, ActionData, GENERIC_OS_NAME, \
+    PackageData, GroupActionsData, GitHubOrgData
 from db.utils import get_releases_list
 from flask_wtf import FlaskForm
 from wtforms import (
@@ -99,6 +100,47 @@ def package_set_validator(form, field: Field):
         raise validators.StopValidation()
 
 
+class AddGroupActions(FlaskForm):
+    id = HiddenField(
+        'ID of an group of actions'
+    )
+    name = StringField(
+        'Name of a group',
+        validators=[
+            validators.DataRequired(),
+        ]
+    )
+    description = StringField(
+        'Description of a group',
+        validators=[
+            validators.DataRequired(),
+        ],
+        widget=TextArea(),
+    )
+    org = SelectField(
+        'GitHub organization',
+        validators=[
+            validators.DataRequired(),
+        ],
+        choices=[]
+    )
+
+    def to_dataclass(self) -> GroupActionsData:
+        return GroupActionsData(
+            id=int(self.id.data) if self.id.data else None,
+            name=self.name.data,
+            description=self.description.data,
+            github_org=GitHubOrgData(
+                name=self.org.data,
+            )
+        )
+
+    def load_from_dataclass(self, group_actions_data: GroupActionsData):
+        self.id.data = group_actions_data.id
+        self.name.data = group_actions_data.name
+        self.description.data = group_actions_data.description
+
+
 class AddAction(FlaskForm):
     id = HiddenField(
         'ID of an action'
@@ -173,6 +215,13 @@ class AddAction(FlaskForm):
             validators.DataRequired(),
         ]
     )
+    description = StringField(
+        'Description',
+        validators=[
+            validators.Optional(),
+        ],
+        widget=TextArea(),
+    )
     in_package_set = StringField(
         'In package set',
         validators=[
@@ -198,19 +247,44 @@ class AddAction(FlaskForm):
     )
 
     def load_from_dataclass(self, action: ActionData):
+        def make_package_set_string(package: PackageData) -> str:
+            if package.module_stream:
+                module_name = package.module_stream.name
+                module_stream = package.module_stream.stream
+            else:
+                module_name = module_stream = ''
+            result = f'{package.name},' \
+                     f'{package.repository},' \
+                     f'{module_name},' \
+                     f'{module_stream}'
+            return result
+
         self.id.data = action.id
+        self.description.data = action.description
         self.action.data = action.action
         self.org.data = action.github_org
         source_release = action.source_release
         target_release = action.target_release
         self.source_generic.data = source_release.os_name == GENERIC_OS_NAME
-        self.source_release.data = '' if source_release.os_name == GENERIC_OS_NAME else source_release.os_name
+        if source_release.os_name == GENERIC_OS_NAME:
+            self.source_release.data = ''
+        else:
+            self.source_release.data = source_release.os_name
         self.source_major_version.data = source_release.major_version
         self.source_minor_version.data = source_release.minor_version
         self.target_generic.data = target_release.os_name == GENERIC_OS_NAME
-        self.target_release.data = '' if target_release.os_name == GENERIC_OS_NAME else target_release.os_name
+        if target_release.os_name == GENERIC_OS_NAME:
+            self.target_release.data = ''
+        else:
+            self.target_release.data = target_release.os_name
         self.target_major_version.data = target_release.major_version
         self.target_minor_version.data = target_release.minor_version
         self.arches.data = ','.join(action.arches)
-        self.in_package_set.data = '\n'.join([f'{in_package.name},{in_package.repository},{in_package.module_stream.name if in_package.module_stream else ""},{in_package.module_stream.stream if in_package.module_stream else ""}' for in_package in action.in_package_set])
-        self.out_package_set.data = '\n'.join([f'{out_package.name},{out_package.repository},{out_package.module_stream.name if out_package.module_stream else ""},{out_package.module_stream.stream if out_package.module_stream else ""}' for out_package in action.out_package_set])
+        self.in_package_set.data = '\n'.join([
+            make_package_set_string(in_package)
+            for in_package in action.in_package_set
+        ])
+        self.out_package_set.data = '\n'.join([
+            make_package_set_string(out_package)
+            for out_package in action.out_package_set
+        ])

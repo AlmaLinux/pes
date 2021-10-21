@@ -146,6 +146,30 @@ class BaseData:
 
 
 @dataclass
+class GroupActionsData(BaseData):
+
+    __skip_fields__ = (
+        'id',
+    )
+
+    id: int = None
+    name: str = None
+    description: str = None
+    github_org: GitHubOrgData = None
+
+    @staticmethod
+    def create_from_json(json_data: dict) -> GroupActionsData:
+        return GroupActionsData(
+            id=json_data.get('id'),
+            name=json_data.get('name'),
+            description=json_data.get('description'),
+            github_org=GitHubOrgData(
+                name=json_data.get('github_org'),
+            ),
+        )
+
+
+@dataclass
 class ActionHistoryData(BaseData):
 
     action_before: str = None
@@ -163,10 +187,11 @@ class ActionHistoryData(BaseData):
 
     def to_dict(self, force_included: list[str] = tuple()) -> dict:
         data_dict = super().to_dict()
-        data_dict['timestamp'] = datetime.strptime(
-            data_dict['timestamp'],
-            TIME_FORMAT_STRING,
-        )
+        if 'timestamp' in data_dict:
+            data_dict['timestamp'] = datetime.strptime(
+                data_dict['timestamp'],
+                TIME_FORMAT_STRING,
+            )
         return data_dict
 
 
@@ -269,6 +294,7 @@ class ActionData(BaseData):
 
     id: int = None
     version: int = None
+    description: str = None
     is_approved: Optional[bool] = False
     github_org: str = None
     source_release: ReleaseData = field(default_factory=ReleaseData)
@@ -286,6 +312,7 @@ class ActionData(BaseData):
         target_release = json_data.get('release') or {}
         return ActionData(
             id=json_data.get('id'),
+            description=json_data.get('description'),
             github_org=json_data.get('org'),
             source_release=ReleaseData.create_from_json(source_release),
             target_release=ReleaseData.create_from_json(target_release),

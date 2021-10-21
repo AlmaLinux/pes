@@ -17,11 +17,36 @@
                 </div>
                 <div class="row">
                     <div class="col-sm">
+                        &nbsp;
+                    </div>
+                    <div class="col-sm">
+                        &nbsp;
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm">
                         {{ form.org.label }}
                     </div>
                     <div class="col-sm">
                         {{ form.org }}
                         <span class="text-danger">{{ ', '.join(form.errors[form.org.name]) }}</span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm">
+                        &nbsp;
+                    </div>
+                    <div class="col-sm">
+                        &nbsp;
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm">
+                        {{ form.description.label }}
+                    </div>
+                    <div class="col-sm">
+                        {{ form.description(rows=5, cols=50) }}
+                        <span class="text-danger">{{ ', '.join(form.errors[form.description.name]) }}</span>
                     </div>
                 </div>
                 <div class="row">
