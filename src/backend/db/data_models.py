@@ -198,11 +198,13 @@ class ActionHistoryData(BaseData):
 @dataclass
 class GitHubOrgData(BaseData):
     name: str = None
+    github_id: int = None
 
     @staticmethod
     def create_from_json(json_data: dict) -> GitHubOrgData:
         return GitHubOrgData(
             name=json_data.get('name'),
+            github_id=json_data.get('github_id'),
         )
 
 
@@ -218,6 +220,9 @@ class UserData(BaseData):
     github_id: int = None
     github_login: str = None
     github_orgs: List[GitHubOrgData] = field(default_factory=list)
+
+    def is_in_org(self, org_name: str) -> bool:
+        return any(org.name == org_name for org in self.github_orgs)
 
 
 @dataclass

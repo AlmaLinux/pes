@@ -32,17 +32,17 @@ PAGE_SIZE = 20
 
 def before_request_handler():
     g.user_data = None
-    if 'user_id' in session:
+    if 'github_id' in session:
         with session_scope() as db_session:
-            if 'github_id' not in session:
-                return
             db_user = db_session.query(User).filter_by(
                 github_id=session.get('github_id'),
             ).one_or_none()  # type: User
             if db_user is not None:
                 g.user_data = db_user.to_dataclass()
+                return
             else:
                 session.pop('github_id')
+    g.user_data = UserData()
 
 
 def authorized_handler(access_token: str, github: GitHub):
@@ -57,10 +57,19 @@ def authorized_handler(access_token: str, github: GitHub):
             github_login=github_user['login'],
         )
         github_orgs_data = [
-            GitHubOrgData(name=org['organization']['login']) for org in
+            GitHubOrgData(
+                name=org['organization']['login'],
+                github_id=org['organization']['id'],
+            ) for org in
             github.get('/user/memberships/orgs')
             if org['state'] == 'active'
         ]
+        for org in github.get(github_user['organizations_url']):
+            if org['login'] not in github_orgs_data:
+                github_orgs_data.append(GitHubOrgData(
+                    name=org['login'],
+                    github_id=org['id'],
+                ))
         db_user = User.search_by_dataclass(
             session=db_session,
             user_data=user_data,
@@ -74,10 +83,9 @@ def authorized_handler(access_token: str, github: GitHub):
 
         g.user_data = db_user.to_dataclass()
         github_orgs = [
-            GitHubOrg.search_by_dataclass(
+            GitHubOrg.create_from_dataclass(
                 session=db_session,
                 github_org_data=org_data,
-                only_one=True,
             ) for org_data in github_orgs_data
         ]
         db_user.github_orgs = github_orgs

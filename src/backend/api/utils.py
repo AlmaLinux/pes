@@ -147,8 +147,9 @@ def login_requires(f):
 def is_our_member(github: GitHub) -> bool:
     if g.user_data is None:
         return False
-    if g.user_data.github_orgs is None or \
-            GitHubOrgData(name=MAIN_ORGANIZATION) not in g.user_data.github_orgs:
+    if g.user_data.github_orgs is None:
+        return False
+    if all(org.name != MAIN_ORGANIZATION for org in g.user_data.github_orgs):
         return False
     try:
         membership = github.get(
@@ -189,7 +190,7 @@ def clear_sessions_fields_before_logout(f):
 
     auth_fields = (
         'csrf_token',
-        'user_id',
+        'github_id',
         'is_our_member',
     )
 
@@ -248,20 +249,17 @@ def raise_for_status(response: TestResponse):
 
 
 def get_user_organizations(
-        add_specific: bool = True,
         only_self: bool = False
 ) -> list[str]:
     """
     Return list of GH orgs for a currently logged user
-    :param add_specific: add admin organization (AlmaLinux) to the list
     :param only_self: return list of orgs to which a user belongs
     """
     user_data = g.user_data  # type: UserData
     user_orgs = [] if user_data is None else user_data.github_orgs
+
     def is_admin_org():
-        return not only_self and user_data and GitHubOrgData(
-            name=MAIN_ORGANIZATION
-        ) in user_data.github_orgs
+        return not only_self and user_data.is_in_org(MAIN_ORGANIZATION)
 
     if is_admin_org():
         with session_scope() as db_session:
@@ -271,12 +269,8 @@ def get_user_organizations(
                 github_org_data=GitHubOrgData(),
                 only_one=False,
             )]
-        if add_specific:
-            orgs = [GLOBAL_ORGANIZATION] + orgs
-    elif add_specific:
-        orgs = [MAIN_ORGANIZATION] + [
-            org.name for org in user_orgs
-        ]
     else:
         orgs = [org.name for org in user_orgs]
+    if not only_self and MAIN_ORGANIZATION not in orgs:
+        orgs.append(MAIN_ORGANIZATION)
     return orgs

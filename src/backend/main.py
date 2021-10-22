@@ -71,7 +71,7 @@ GET_ACTIONS_ARGS = {
 
 def _prepare_data_dict() -> Dict[str, Union[str, bool]]:
     data = {
-        'logged': bool(g.user_data),
+        'logged': bool(g.user_data.github_login),
         'username': g.user_data.github_login if g.user_data else None,
         'is_our_member': session.get('is_our_member', False),
         'url_args': {},
@@ -132,6 +132,7 @@ def index():
     '/bulk_upload',
     methods=('GET', 'POST',),
 )
+@login_requires
 @membership_requires
 def bulk_upload():
     bulk_upload_form = BulkUpload()
@@ -195,7 +196,7 @@ def view_action(action_id: int):
 @login_requires
 def add_action():
     add_action_form = AddAction()
-    add_action_form.org.choices = get_user_organizations(add_specific=True)
+    add_action_form.org.choices = get_user_organizations()
     data = {
         'main_title': 'Add an action',
         'form': add_action_form,
@@ -220,7 +221,6 @@ def add_action():
 def add_group():
     add_group_form = AddGroupActions()
     add_group_form.org.choices = get_user_organizations(
-        add_specific=False,
         only_self=True,
     )
     data = {
@@ -246,16 +246,20 @@ def add_group():
 @login_requires
 def edit_action(action_id: int):
     edit_action_form = AddAction()
-    edit_action_form.org.choices = get_user_organizations(add_specific=False)
     action = get_action_handler(action_id)
+    edit_action_form.org.choices = get_user_organizations()
     if request.method == 'GET':
         edit_action_form.load_from_dataclass(action=action)
+    if session.get('is_our_member', False) and not action.is_approved:
+        saving_button_name = 'Approve & save action'
+    else:
+        saving_button_name = 'Save action'
+
     data = {
         'main_title': 'Edit an action',
         'form': edit_action_form,
         'is_added': False,
-        'saving_button_name': 'Save action' if action.is_approved
-        else 'Approve & save action',
+        'saving_button_name': saving_button_name,
     }
     data.update(_prepare_data_dict())
     if edit_action_form.validate_on_submit():
@@ -278,7 +282,6 @@ def edit_action(action_id: int):
 def edit_group(group_id: int):
     edit_group_of_actions_form = AddGroupActions()
     edit_group_of_actions_form.org.choices = get_user_organizations(
-        add_specific=False,
         only_self=True,
     )
     group = get_group_of_actions_handler(group_id)
@@ -379,21 +382,15 @@ def get_history(page: int = 1, action_id: int = None, username: str = None):
 def actions():
     data = request.json
     _is_our_member = session.get('is_our_member', False)
+    action = ActionData.create_from_json(data)
+    action.is_approved = g.user_data.is_in_org(action.github_org)
     if request.method == 'PUT':
-        action = ActionData.create_from_json(data)
-        action.is_approved = _is_our_member
         return push_action(action)
     elif request.method == 'GET':
-        action = ActionData.create_from_json(data)
-        action.is_approved = _is_our_member
         return get_actions(action)
     elif request.method == 'POST':
-        action = ActionData.create_from_json(data)
-        action.is_approved = _is_our_member
         return modify_action(action)
     elif request.method == 'DELETE':
-        action = ActionData.create_from_json(data)
-        action.is_approved = _is_our_member
         return remove_action(action)
 
 

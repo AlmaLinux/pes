@@ -189,6 +189,7 @@ class GitHubOrg(Base):
     __tablename__ = 'github_orgs'
 
     id = Column(Integer, primary_key=True)
+    github_id = Column(Integer, nullable=False)
     name = Column(String, nullable=False)
 
     @staticmethod
@@ -210,6 +211,7 @@ class GitHubOrg(Base):
     def to_dataclass(self) -> GitHubOrgData:
         return GitHubOrgData(
             name=self.name,
+            github_id=self.github_id,
         )
 
     @staticmethod
