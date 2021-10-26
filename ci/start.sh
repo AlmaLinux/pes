@@ -12,4 +12,4 @@ else
 fi
 
 # start uWSGI
-exec uwsgi -p "${UWSGI_PROCESSES:-2}" --http "${UWSGI_ADDRESS}:${UWSGI_PORT}" --ini /src/app/uwsgi.ini
+exec gunicorn -w "${UWSGI_PROCESSES:-2}" -b "${UWSGI_ADDRESS}:${UWSGI_PORT}" --config /src/app/wsgi.ini.py main:app

@@ -16,16 +16,16 @@ from sqlalchemy.exc import OperationalError
 from db.db_engine import Engine
 from db.db_models import Base, Release
 from sqlalchemy.engine.reflection import Inspector
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
 BASE_REVISION = 'base'
 
 
-@event.listens_for(SAEngine, "connect")
-def set_sqlite_pragma(dbapi_connection, connection_record):
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
+# @event.listens_for(SAEngine, "connect")
+# def set_sqlite_pragma(dbapi_connection, connection_record):
+#     cursor = dbapi_connection.cursor()
+#     cursor.execute("PRAGMA foreign_keys=ON")
+#     cursor.close()
 
 
 @contextmanager
@@ -33,18 +33,19 @@ def session_scope() -> Session:
     """
     Provide a transactional scope around a series of operations
     """
-    session = Session(
+    my_session_class = sessionmaker(
         bind=Engine.get_instance(),
         autoflush=False,
     )
-    try:
-        yield session
-        session.commit()
-    except:
-        session.rollback()
-        raise
-    finally:
-        session.close()
+    with my_session_class() as session:
+        try:
+            yield session
+            session.commit()
+        except:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 def is_db_exists():

@@ -1,0 +1,10 @@
+bind = '127.0.0.1:8080'
+workers = 2
+threads = 4
+loglevel = 'info'
+accesslog = '-'
+access_log_format = '"%({X-Forwarded-For}i)s" %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
+errorlog = '-'
+timeout = 180
+user = 'webserver'
+name = 'webserver'

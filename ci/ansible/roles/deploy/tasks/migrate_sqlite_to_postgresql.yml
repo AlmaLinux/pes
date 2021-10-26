@@ -1,0 +1,18 @@
+---
+
+- name: Get state of previous migration
+  stat:
+    path: "{{ config_root }}/.db_is_migrated"
+  register: db_is_migrated
+
+- name: Set state of current migration
+  file:
+    path: "{{ config_root }}/.db_is_migrated"
+    state: touch
+  when: db_is_migrated is defined and not db_is_migrated.stat.exists
+
+- name: Run pqloader
+  community.docker.docker_container_exec:
+    container: "{{ container_env_prefix }}_postgres"
+    command: 'pgloader /migration_scenario'
+  when: db_is_migrated is defined and not db_is_migrated.stat.exists
