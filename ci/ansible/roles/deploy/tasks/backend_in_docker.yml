@@ -6,7 +6,6 @@
     sentry_disabled: "{{ (deploy_environment is defined and deploy_environment in nginx_environments) | ternary('False', 'True') }}"
     published_ports: "{{ (deploy_environment is defined and deploy_environment in nginx_environments) | ternary(['127.0.0.1:{{ backend_port }}', uwsgi_port] | join(':'), [backend_port, uwsgi_port] | join(':')) }}"
 
-
 - name: Build backend docker image
   docker_image:
     name: "python38-pes"
@@ -18,19 +17,6 @@
       dockerfile: "Dockerfile.backend"
     source: build
     force_source: yes
-
-- name: Build postgres docker image
-  docker_image:
-    name: "postgres-pes"
-    build:
-      path: "{{ source_path }}/ci/"
-      pull: yes
-      network: host
-      target: "postgres-with-pgloader"
-      dockerfile: "Dockerfile.postgres"
-    source: build
-    force_source: yes
-
 
 - name: Up the backend container from docker image
   docker_container:

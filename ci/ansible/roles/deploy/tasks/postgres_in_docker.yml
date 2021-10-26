@@ -8,6 +8,18 @@
     group: root
     mode: '0644'
 
+- name: Build postgres docker image
+  docker_image:
+    name: "postgres-pes"
+    build:
+      path: "{{ source_path }}/ci/"
+      pull: yes
+      network: host
+      target: "postgres-with-pgloader"
+      dockerfile: "Dockerfile.postgres"
+    source: build
+    force_source: yes
+
 - name: Up the postgres container from docker image
   docker_container:
     name: "{{ container_env_prefix }}_postgres"
@@ -30,7 +42,7 @@
         target: "/data"
         read_only: no
         type: bind
-      - source: "{{ config_root }}/data"
+      - source: "{{ config_root }}/data/pg_data"
         target: "/var/lib/postgresql/data"
         read_only: no
         type: bind
