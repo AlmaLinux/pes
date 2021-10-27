@@ -7,6 +7,7 @@ nginx_environments:
 postgres_user: postgres_user
 postgres_db: postgres_db
 postgres_host: postgres
+postgres_password: "{{ postgres_password | urlencode }}"
 
 dnf_packages:
   - docker-ce
