@@ -21,13 +21,6 @@ from sqlalchemy.orm import Session, sessionmaker
 BASE_REVISION = 'base'
 
 
-# @event.listens_for(SAEngine, "connect")
-# def set_sqlite_pragma(dbapi_connection, connection_record):
-#     cursor = dbapi_connection.cursor()
-#     cursor.execute("PRAGMA foreign_keys=ON")
-#     cursor.close()
-
-
 @contextmanager
 def session_scope() -> Session:
     """
