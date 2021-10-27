@@ -2,3 +2,12 @@ source_path: /root/pes
 nginx_environments:
   - "Production"
   - "Staging"
+
+# postgresql variables
+postgres_user: postgres_user
+postgres_db: postgres_db
+postgres_host: postgres
+
+dnf_packages:
+  - docker-ce
+  - git

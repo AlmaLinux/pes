@@ -6,17 +6,18 @@
     sentry_disabled: "{{ (deploy_environment is defined and deploy_environment in nginx_environments) | ternary('False', 'True') }}"
     published_ports: "{{ (deploy_environment is defined and deploy_environment in nginx_environments) | ternary(['127.0.0.1:{{ backend_port }}', uwsgi_port] | join(':'), [backend_port, uwsgi_port] | join(':')) }}"
 
-
-- name: Build docker image
+- name: Build backend docker image
   docker_image:
     name: "python38-pes"
     build:
       path: "{{ source_path }}/ci/"
       pull: yes
       network: host
+      target: "python39-uwsgi"
+      dockerfile: "Dockerfile.backend"
+      rm: yes
     source: build
     force_source: yes
-
 
 - name: Up the backend container from docker image
   docker_container:
@@ -31,6 +32,10 @@
     sysctls:
       net.core.somaxconn: 65535
     env:
+      POSTGRES_USER: "{{ postgres_user }}"
+      POSTGRES_DB: "{{ postgres_db }}"
+      POSTGRES_PASSWORD: "{{ postgres_password | string }}"
+      POSTGRES_HOST: "{{ postgres_host }}"
       UWSGI_PROCESSES: "{{ uwsgi_processes | string }}"
       SENTRY_DSN: "{{ sentry_dsn | string }}"
       PYTHONPATH: "/src/app"
@@ -47,10 +52,6 @@
       - source: "{{ source_path }}/src/backend"
         target: "/src/app"
         read_only: yes
-        type: bind
-      - source: "{{ config_root }}/data"
-        target: "/data"
-        read_only: no
         type: bind
     log_driver: "json-file"
     log_options:

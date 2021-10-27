@@ -1,4 +1,6 @@
 FROM python:3 AS python39-uwsgi
+RUN apt-get update
+RUN apt-get install -y libpq-dev
 COPY requirements.txt requirements.txt
 RUN pip install -U -r requirements.txt
 

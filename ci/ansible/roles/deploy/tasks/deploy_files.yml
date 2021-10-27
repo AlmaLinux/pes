@@ -3,6 +3,8 @@
   synchronize:
     src: "{{ item }}"
     dest: "{{ source_path }}"
+    rsync_opts:
+      - "--exclude=.venv"
   with_items:
     - "../../../ci"
     - "../../../src"

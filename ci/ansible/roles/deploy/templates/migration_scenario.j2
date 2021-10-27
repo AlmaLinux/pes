@@ -1,0 +1,7 @@
+load database
+     from sqlite:////data/pes.db
+     into postgresql://{{ postgres_user }}:{{ postgres_password }}@{{ postgres_host }}:5432/{{ postgres_db }}
+
+with include drop, create tables, create indexes, reset sequences
+
+set work_mem to '16MB', maintenance_work_mem to '512 MB';

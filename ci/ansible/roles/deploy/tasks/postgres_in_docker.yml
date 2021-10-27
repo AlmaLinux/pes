@@ -1,0 +1,57 @@
+---
+
+- name: Prepare scenario of migration
+  template:
+    src: migration_scenario.j2
+    dest: "{{ config_root }}/migration_scenario"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Build postgres docker image
+  docker_image:
+    name: "postgres-pes"
+    build:
+      path: "{{ source_path }}/ci/"
+      pull: yes
+      network: host
+      target: "postgres-with-pgloader"
+      dockerfile: "Dockerfile.postgres"
+      rm: yes
+    source: build
+    force_source: yes
+
+- name: Up the postgres container from docker image
+  docker_container:
+    name: "{{ container_env_prefix }}_postgres"
+    image: "postgres-pes"
+    state: started
+    restart: yes
+    restart_policy: unless-stopped
+    hostname: "{{ postgres_host }}"
+    networks:
+      - name: backend
+    env:
+      POSTGRES_USER: "{{ postgres_user }}"
+      POSTGRES_DB: "{{ postgres_db }}"
+      POSTGRES_PASSWORD: "{{ postgres_password | string }}"
+      POSTGRES_HOST: "{{ postgres_host }}"
+    published_ports:
+      - "127.0.0.1:5432:5432"
+    mounts:
+      - source: "{{ config_root }}/db"
+        target: "/data"
+        read_only: no
+        type: bind
+      - source: "{{ config_root }}/data/pg_data"
+        target: "/var/lib/postgresql/data"
+        read_only: no
+        type: bind
+      - source: "{{ config_root }}/migration_scenario"
+        target: "/migration_scenario"
+        read_only: yes
+        type: bind
+    log_driver: "json-file"
+    log_options:
+      max-size: "200m"
+      max-file: "5"
