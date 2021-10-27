@@ -15,6 +15,7 @@
       network: host
       target: "python39-uwsgi"
       dockerfile: "Dockerfile.backend"
+      rm: yes
     source: build
     force_source: yes
 

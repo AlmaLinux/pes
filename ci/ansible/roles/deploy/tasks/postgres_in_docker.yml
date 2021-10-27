@@ -17,6 +17,7 @@
       network: host
       target: "postgres-with-pgloader"
       dockerfile: "Dockerfile.postgres"
+      rm: yes
     source: build
     force_source: yes
 
