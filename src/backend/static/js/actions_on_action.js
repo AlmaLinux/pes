@@ -20,7 +20,7 @@ $(document).ready(function($) {
 
 // delete an action
 $(document).ready(function($) {
-    $(".delete-icon").click(function() {
+    $(".delete-icon.delete-action").click(function() {
         if (confirm('Delete this action?')) {
             $.ajax('/api/actions', {
                 contentType: 'application/json',

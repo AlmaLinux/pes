@@ -1,14 +1,18 @@
 # coding=utf-8
 import json
-from typing import Union, Dict
+from typing import (
+    Union,
+    Dict,
+)
 
-from requests import RequestException
+from datetime import datetime
 from webargs import fields
 from webargs.flaskparser import use_args
 
 from api.exceptions import (
     BaseCustomException,
-    BadRequestFormatExceptioin, CustomHTTPError,
+    BadRequestFormatExceptioin,
+    CustomHTTPError,
 )
 from api.handlers import (
     push_action,
@@ -19,11 +23,18 @@ from api.handlers import (
     bulk_upload_handler,
     dump_handler,
     authorized_handler,
-    add_or_edit_action_handler, before_request_handler, get_actions_handler,
-    get_action_handler, approve_pull_request, get_users_handler,
-    get_history_handler, search_actions_handler,
-    add_or_edit_group_of_actions_handler, get_groups_of_actions_handler,
+    add_or_edit_action_handler,
+    before_request_handler,
+    get_actions_handler,
+    get_action_handler,
+    approve_pull_request,
+    get_users_handler,
+    get_history_handler,
+    search_actions_handler,
+    add_or_edit_group_of_actions_handler,
+    get_groups_of_actions_handler,
     get_group_of_actions_handler,
+    remove_group,
 )
 from api.utils import (
     success_result,
@@ -33,18 +44,24 @@ from api.utils import (
     membership_requires,
     login_requires,
     create_flask_application,
-    clear_sessions_fields_before_logout, get_user_organizations,
+    clear_sessions_fields_before_logout,
+    get_user_organizations,
+    get_groups,
 )
 from common.forms import (
     BulkUpload,
     Dump,
-    AddAction, AddGroupActions,
+    AddAction,
+    AddGroupActions,
 )
 from common.sentry import (
     init_sentry_client,
     get_logger,
 )
-from db.data_models import ActionData
+from db.data_models import (
+    ActionData,
+    GroupActionsData,
+)
 from flask import (
     request,
     Response,
@@ -63,10 +80,16 @@ init_sentry_client()
 logger = get_logger(__name__)
 github = GitHub(app)
 
-
 GET_ACTIONS_ARGS = {
     'package': fields.String()
 }
+
+
+@app.context_processor
+def inject_now_date():
+    return {
+        'now': datetime.utcnow(),
+    }
 
 
 def _prepare_data_dict() -> Dict[str, Union[str, bool]]:
@@ -158,7 +181,8 @@ def bulk_upload():
 )
 def dump_json():
     dump_form = Dump()
-    dump_form.org.choices = get_user_organizations()
+    dump_form.orgs.choices = get_user_organizations()
+    dump_form.groups.choices = get_groups()
     data = {
         'main_title': 'Dump JSON',
         'form': dump_form,
@@ -168,7 +192,8 @@ def dump_json():
         req = dump_handler(
             source_release=dump_form.source_release.data,
             target_release=dump_form.target_release.data,
-            organization=dump_form.org.data,
+            organizations=dump_form.orgs.data,
+            groups=dump_form.groups.data,
         )
         return jsonify_response(
             result=req.json,
@@ -281,12 +306,12 @@ def edit_action(action_id: int):
 @login_requires
 def edit_group(group_id: int):
     edit_group_of_actions_form = AddGroupActions()
-    edit_group_of_actions_form.org.choices = get_user_organizations(
-        only_self=True,
-    )
+    edit_group_of_actions_form.org.choices = get_user_organizations()
     group = get_group_of_actions_handler(group_id)
     if request.method == 'GET':
         edit_group_of_actions_form.load_from_dataclass(group)
+        logger.warning(edit_group_of_actions_form.org)
+        logger.warning(edit_group_of_actions_form.org.data)
     data = {
         'main_title': 'Edit an group of actions',
         'form': edit_group_of_actions_form,
@@ -372,6 +397,21 @@ def get_history(page: int = 1, action_id: int = None, username: str = None):
 
 
 @app.route(
+    '/api/groups',
+    methods=('DELETE',),
+)
+@success_result
+@error_result
+@validate_json
+@login_requires
+def groups():
+    data = request.json
+    group = GroupActionsData.create_from_json(data)
+    if request.method == 'DELETE':
+        return remove_group(group)
+
+
+@app.route(
     '/api/actions',
     methods=('GET', 'PUT', 'DELETE', 'POST'),
 )
@@ -383,7 +423,9 @@ def actions():
     data = request.json
     _is_our_member = session.get('is_our_member', False)
     action = ActionData.create_from_json(data)
-    action.is_approved = g.user_data.is_in_org(action.github_org)
+    logger.warning(action)
+    action.is_approved = action.is_approved or \
+                         g.user_data.is_in_org(action.github_org.name)
     if request.method == 'PUT':
         return push_action(action)
     elif request.method == 'GET':
@@ -396,9 +438,10 @@ def actions():
 
 @app.route('/actions', methods=('GET',))
 @app.route('/actions/<int:page>', methods=('GET',))
+@app.route('/actions/group/<int:group_id>', methods=('GET',))
+@app.route('/actions/group/<int:group_id>/<int:page>', methods=('GET',))
 @use_args(GET_ACTIONS_ARGS, location='query')
-def get_list_actions(url_args, page: int = 1):
-
+def get_list_actions(url_args, page: int = 1, group_id: int = None):
     data = {
         'main_title': 'List of actions',
         'search_value': url_args.get('package', ''),
@@ -408,10 +451,14 @@ def get_list_actions(url_args, page: int = 1):
     if url_args:
         list_actions, pagination = search_actions_handler(
             params=url_args,
+            group_id=group_id,
             page=page,
         )
     else:
-        list_actions, pagination = get_actions_handler(page=page)
+        list_actions, pagination = get_actions_handler(
+            page=page,
+            group_id=group_id,
+        )
     data.update({
         'actions': list_actions,
         'pagination': pagination,
@@ -447,7 +494,8 @@ def dump():
     return dump_pes_json(
         source_release=data['source_release'],
         target_release=data['target_release'],
-        organization=data['org'],
+        organizations=data.get('orgs', []),
+        groups=data.get('groups', []),
     )
 
 

@@ -3,7 +3,6 @@ $(document).ready(function($) {
     const dumpText = $('.submit-button-text');
     const spinner = $('.spinner-border');
     dumpButton.click(function () {
-        $(this).prop('disabled', true);
         dumpText.text(dumpText.data('send-text'));
         spinner.show();
     });

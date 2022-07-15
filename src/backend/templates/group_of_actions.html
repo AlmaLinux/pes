@@ -16,12 +16,17 @@
         {% for group in groups %}
             <tr>
                 <td>
-                    {% if is_our_member %}
+                    {% if g.user_data.is_in_org(group.github_org.name) or is_our_member %}
                         <a href="{{ url_for('edit_group', group_id=group.id) }}" class="icon-link" data-toggle="tooltip" data-placement="top" title="Edit this group">
                             <span class="material-icons edit-icon">edit</span>
                         </a>
-{#                        <span class="material-icons delete-icon linkable-element" data-action-id="{{ action.id }}" data-toggle="tooltip" data-placement="top" title="Delete this action">delete</span>#}
+                    &nbsp;
+                        <span class="material-icons delete-icon linkable-element delete-group" data-group-id="{{ group.id }}" data-toggle="tooltip" data-placement="top" title="Delete this group">delete</span>
                     {% endif %}
+                    &nbsp;
+                    <a href="{{ url_for('get_list_actions', group_id=group.id) }}" class="icon-link" data-toggle="tooltip" data-placement="top" title="View this action">
+                        <span class="material-icons view-icon" data-toggle="tooltip" data-placement="top" title="View this action">visibility</span>
+                    </a>
                 </td>
                 <td>{{ group.name }}</td>
                 <td>{{ group.description }}</td>
