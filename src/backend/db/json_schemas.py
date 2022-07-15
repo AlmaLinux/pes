@@ -19,7 +19,15 @@ put_action = {
             ]
         },
         "org": {
-            "type": "string",
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                },
+                "github_id": {
+                    "type": "integer",
+                },
+            },
         },
         "description": {
             "type": "string",
@@ -177,7 +185,15 @@ get_actions = {
             "type": "integer",
         },
         "org": {
-            "type": "string",
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                },
+                "github_id": {
+                    "type": "integer",
+                },
+            },
         },
         "description": {
             "type": "string",
@@ -370,7 +386,15 @@ post_action = {
             ]
         },
         "org": {
-            "type": "string",
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                },
+                "github_id": {
+                    "type": "integer",
+                },
+            },
         },
         "in_packageset": {
             "type": "object",
@@ -543,14 +567,35 @@ get_dump = {
         "target_release": {
             "type": "string"
         },
-        "org": {
-            "type": "string"
+        "orgs": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "groups": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
         },
     },
     "required": [
         "source_release",
         "target_release",
-        "org"
+    ]
+}
+
+delete_group = {
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer"
+        }
+    },
+    "required": [
+        "id"
     ]
 }
 
@@ -568,5 +613,8 @@ json_schema_mapping = defaultdict(dict, {
     },
     '/api/dump': {
         'GET': get_dump,
-    }
+    },
+    '/api/groups': {
+        'DELETE': delete_group,
+    },
 })

@@ -59,6 +59,23 @@
                 </div>
                 <div class="row">
                     <div class="col-sm">
+                        {{ form.actions_ids.label }}<br>
+                    </div>
+                    <div class="col-sm">
+                        {{ form.actions_ids(rows=5, cols=50) }}
+                        <span class="text-danger">{{ ', '.join(form.errors[form.actions_ids.name]) }}</span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm">
+                        &nbsp;
+                    </div>
+                    <div class="col-sm">
+                        &nbsp;
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm">
                         &nbsp;
                     </div>
                     <div class="col-sm">

@@ -19,7 +19,6 @@
       dockerfile: "Dockerfile.postgres"
       rm: yes
     source: build
-    force_source: yes
 
 - name: Up the postgres container from docker image
   docker_container:
@@ -43,7 +42,7 @@
         target: "/data"
         read_only: no
         type: bind
-      - source: "{{ config_root }}/data/pg_data"
+      - source: "{{ config_root }}/data/{{ postgres_db_subpath }}/pg_data"
         target: "/var/lib/postgresql/data"
         read_only: no
         type: bind

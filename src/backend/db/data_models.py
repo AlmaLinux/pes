@@ -17,6 +17,7 @@ from typing import List, Optional
 GENERIC_OS_NAME = 'generic'
 GLOBAL_ORGANIZATION = 'All'
 MAIN_ORGANIZATION = 'AlmaLinux'
+MAIN_ORGANIZATION_ID = '77327804'
 TIME_FORMAT_STRING = '%Y-%m-%d %H:%M:%S'
 
 
@@ -150,12 +151,14 @@ class GroupActionsData(BaseData):
 
     __skip_fields__ = (
         'id',
+        'actions_ids',
     )
 
     id: int = None
     name: str = None
     description: str = None
     github_org: GitHubOrgData = None
+    actions_ids: List[int] = None
 
     @staticmethod
     def create_from_json(json_data: dict) -> GroupActionsData:
@@ -166,6 +169,7 @@ class GroupActionsData(BaseData):
             github_org=GitHubOrgData(
                 name=json_data.get('github_org'),
             ),
+            actions_ids=json_data.get('actions_ids'),
         )
 
 
@@ -292,6 +296,7 @@ class ActionData(BaseData):
         'id',
         'in_package_set',
         'out_package_set',
+        'groups',
     )
     __convertors__ = {
         'arches': lambda i: ','.join(i),
@@ -301,24 +306,27 @@ class ActionData(BaseData):
     version: int = None
     description: str = None
     is_approved: Optional[bool] = False
-    github_org: str = None
+    github_org: GitHubOrgData = None
     source_release: ReleaseData = field(default_factory=ReleaseData)
     target_release: ReleaseData = field(default_factory=ReleaseData)
     action: ActionType = None
     in_package_set: List[PackageData] = field(default_factory=list)
     out_package_set: List[PackageData] = field(default_factory=list)
     arches: List[str] = field(default_factory=list)
+    groups: List[GroupActionsData] = field(default_factory=list)
 
     @staticmethod
     def create_from_json(json_data: dict) -> ActionData:
+
         in_package_set = json_data.get('in_packageset') or {}
         out_package_set = json_data.get('out_packageset') or {}
         source_release = json_data.get('initial_release') or {}
         target_release = json_data.get('release') or {}
+        github_org = json_data.get('org')
         return ActionData(
             id=json_data.get('id'),
             description=json_data.get('description'),
-            github_org=json_data.get('org'),
+            github_org=GitHubOrgData.create_from_json(github_org),
             source_release=ReleaseData.create_from_json(source_release),
             target_release=ReleaseData.create_from_json(target_release),
             action=json_data.get('action'),
@@ -369,4 +377,6 @@ class ActionData(BaseData):
             del out_package['id']
         del result['in_package_set']
         del result['out_package_set']
+        del result['groups']
+        del result['github_org']
         return result

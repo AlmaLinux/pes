@@ -9,8 +9,6 @@ from alembic import command, script
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
 from db.data_models import GENERIC_OS_NAME
-from sqlalchemy import event
-from sqlalchemy.engine import Engine as SAEngine
 from sqlalchemy.exc import OperationalError
 
 from db.db_engine import Engine
