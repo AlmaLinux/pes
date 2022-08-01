@@ -1,11 +1,7 @@
 # coding=utf-8
 import os
 from functools import wraps
-from typing import (
-    Dict,
-    Any,
-    AnyStr,
-)
+from typing import Any
 
 import jsonschema
 from flask import (
@@ -44,7 +40,7 @@ logger = get_logger(__name__)
 
 
 def jsonify_response(
-        result: Dict[str, Any],
+        result: dict[str, Any],
         status_code: int,
 ) -> Response:
     return make_response(
@@ -54,7 +50,7 @@ def jsonify_response(
 
 
 def textify_response(
-        content: AnyStr,
+        content: str,
         status_code: int,
 ) -> Response:
     response = make_response(

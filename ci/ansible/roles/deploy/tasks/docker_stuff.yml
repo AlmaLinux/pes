@@ -8,3 +8,8 @@
   docker_network:
     name: public
     driver: bridge
+
+- name: Auth in Docker registry
+  docker_login:
+    username: soksanichenko
+    password: "{{ docker_hub_token }}"

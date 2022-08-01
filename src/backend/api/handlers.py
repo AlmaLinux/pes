@@ -1,12 +1,9 @@
 # coding=utf-8
+from __future__ import annotations
+
 import datetime
 import json
 from itertools import zip_longest
-from typing import (
-    List,
-    Optional,
-    Tuple,
-)
 
 from flask import (
     request,
@@ -297,16 +294,12 @@ def add_or_edit_group_of_actions_handler(
 ) -> None:
     group_actions_data = add_group_form.to_dataclass()
     with session_scope() as db_session:
-        if is_new:
-            Group.create_from_dataclass(
-                session=db_session,
-                group_actions_data=group_actions_data,
-            )
-        else:
-            Group.update_from_dataclass(
-                session=db_session,
-                group_actions_data=group_actions_data,
-            )
+        group_method = Group.create_from_dataclass if is_new else \
+            Group.update_from_dataclass
+        group_method(
+            session=db_session,
+            group_actions_data=group_actions_data,
+        )
 
 
 def add_or_edit_action_handler(
@@ -419,7 +412,7 @@ def get_actions_handler(
         page: int,
         group_id: int,
         page_size: int = PAGE_SIZE,
-) -> Tuple[List[ActionData], Page]:
+) -> tuple[list[ActionData], Page]:
     with session_scope() as db_session:
         pagination = Action.search_by_dataclass(
             action_data=ActionData(is_approved=None),
@@ -442,7 +435,7 @@ def search_actions_handler(
         group_id: int,
         page: int,
         page_size: int = PAGE_SIZE,
-) -> Tuple[List[ActionData], Page]:
+) -> tuple[list[ActionData], Page]:
     with session_scope() as db_session:
         package_name = params.get('package')
         packages = db_session.query(Package).filter(
@@ -473,7 +466,7 @@ def search_actions_handler(
     return actions, pagination
 
 
-def get_action_handler(action_id: int) -> Optional[ActionData]:
+def get_action_handler(action_id: int) -> ActionData | None:
     with session_scope() as db_session:
         actions = Action.search_by_dataclass(
             action_data=ActionData(id=action_id, is_approved=None),
@@ -490,7 +483,7 @@ def get_action_handler(action_id: int) -> Optional[ActionData]:
     return action
 
 
-def get_group_of_actions_handler(group_id: int) -> Optional[GroupActionsData]:
+def get_group_of_actions_handler(group_id: int) -> GroupActionsData | None:
     with session_scope() as db_session:
         group = db_session.query(Group).get(group_id).to_dataclass()
     return group
@@ -516,7 +509,7 @@ def approve_pull_request(data: dict[str, int]):
 def get_users_handler(
         page: int,
         page_size: int = PAGE_SIZE,
-) -> Tuple[List[UserData], Page]:
+) -> tuple[list[UserData], Page]:
     with session_scope() as db_session:
         user_data = g.user_data  # type: UserData
         pagination = User.search_by_dataclass(
@@ -536,7 +529,7 @@ def get_users_handler(
 def get_groups_of_actions_handler(
         page: int,
         page_size: int = PAGE_SIZE,
-) -> Tuple[List[GroupActionsData], Page]:
+) -> tuple[list[GroupActionsData], Page]:
     with session_scope() as db_session:
         user_data = g.user_data  # type: UserData
         pagination = Group.search_by_github_orgs(
@@ -558,7 +551,7 @@ def get_history_handler(
         action_id: int = None,
         username: str = None,
         page_size: int = PAGE_SIZE,
-) -> Tuple[List[ActionHistoryData], Page]:
+) -> tuple[list[ActionHistoryData], Page]:
     with session_scope() as db_session:
         if action_id is not None:
             pagination = ActionHistory.get_history_by_action_id(

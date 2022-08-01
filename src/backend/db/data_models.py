@@ -10,9 +10,9 @@ from dataclasses import (
     dataclass,
     field,
     is_dataclass,
-    asdict, fields,
+    asdict,
+    fields,
 )
-from typing import List, Optional
 
 GENERIC_OS_NAME = 'generic'
 GLOBAL_ORGANIZATION = 'All'
@@ -107,7 +107,7 @@ class ActionType(enum.Enum):
         return [value.value for value in ActionType]
 
     @staticmethod
-    def get_index(name: ActionType):
+    def get_index(name: str):
         return {value.value: i for i, value in enumerate(ActionType)}[name]
 
     @staticmethod
@@ -158,7 +158,7 @@ class GroupActionsData(BaseData):
     name: str = None
     description: str = None
     github_org: GitHubOrgData = None
-    actions_ids: List[int] = None
+    actions_ids: list[int] = None
 
     @staticmethod
     def create_from_json(json_data: dict) -> GroupActionsData:
@@ -223,7 +223,7 @@ class UserData(BaseData):
     github_access_token: str = None
     github_id: int = None
     github_login: str = None
-    github_orgs: List[GitHubOrgData] = field(default_factory=list)
+    github_orgs: list[GitHubOrgData] = field(default_factory=list)
 
     def is_in_org(self, org_name: str) -> bool:
         return any(org.name == org_name for org in self.github_orgs)
@@ -305,15 +305,15 @@ class ActionData(BaseData):
     id: int = None
     version: int = None
     description: str = None
-    is_approved: Optional[bool] = False
+    is_approved: bool | None = False
     github_org: GitHubOrgData = None
     source_release: ReleaseData = field(default_factory=ReleaseData)
     target_release: ReleaseData = field(default_factory=ReleaseData)
     action: ActionType = None
-    in_package_set: List[PackageData] = field(default_factory=list)
-    out_package_set: List[PackageData] = field(default_factory=list)
-    arches: List[str] = field(default_factory=list)
-    groups: List[GroupActionsData] = field(default_factory=list)
+    in_package_set: list[PackageData] = field(default_factory=list)
+    out_package_set: list[PackageData] = field(default_factory=list)
+    arches: list[str] = field(default_factory=list)
+    groups: list[GroupActionsData] = field(default_factory=list)
 
     @staticmethod
     def create_from_json(json_data: dict) -> ActionData:
@@ -378,5 +378,4 @@ class ActionData(BaseData):
         del result['in_package_set']
         del result['out_package_set']
         del result['groups']
-        del result['github_org']
         return result

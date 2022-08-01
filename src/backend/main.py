@@ -1,11 +1,10 @@
 # coding=utf-8
+from __future__ import annotations
+
 import json
-from typing import (
-    Union,
-    Dict,
-)
 
 from datetime import datetime
+
 from webargs import fields
 from webargs.flaskparser import use_args
 
@@ -92,7 +91,7 @@ def inject_now_date():
     }
 
 
-def _prepare_data_dict() -> Dict[str, Union[str, bool]]:
+def _prepare_data_dict() -> dict[str, str | bool]:
     data = {
         'logged': bool(g.user_data.github_login),
         'username': g.user_data.github_login if g.user_data else None,

@@ -11,7 +11,7 @@
 
 - name: Create db directory
   file:
-    name: "{{ config_root }}/data/pg_data"
+    name: "{{ config_root }}/data/{{ postgres_db_subpath }}/pg_data"
     state: directory
     recurse: yes
     mode: '0755'

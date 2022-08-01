@@ -1,9 +1,11 @@
 ---
 - import_tasks: common_setup.yml
+  tags:
+    - always
 - import_tasks: deploy_files.yml
   tags:
     - deploy_files
-- import_tasks: docker_networks.yml
+- import_tasks: docker_stuff.yml
 - import_tasks: postgres_in_docker.yml
 - import_tasks: migrate_sqlite_to_postgresql.yml
 - import_tasks: backend_in_docker.yml
@@ -12,3 +14,5 @@
 - import_tasks: setup_https.yml
   when: domain is defined and domain != ''
 - import_tasks: nginx_in_docker.yml
+  tags:
+    - nginx

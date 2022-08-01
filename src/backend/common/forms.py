@@ -167,8 +167,8 @@ class AddGroupActions(FlaskForm):
                 github_id=self.org.data,
             ),
             actions_ids=[
-                int(action_id.strip()) for action_id in
-                self.actions_ids.data.split(',')
+                int(action_id.strip())
+                for action_id in self.actions_ids.data.split(',')
             ] if self.actions_ids.data else [],
         )
 

@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import json
-from typing import List, Optional, Union
 
 from flask import g
-from sqlalchemy_pagination import paginate, Page
+from sqlalchemy_pagination import (
+    paginate,
+    Page,
+)
 from api.exceptions import DBRecordNotFound
 from db.data_models import (
     ActionType,
@@ -116,7 +118,7 @@ class Group(Base):
     @staticmethod
     def search_by_github_orgs(
             session: Session,
-            github_orgs: List[GitHubOrgData],
+            github_orgs: list[GitHubOrgData],
             page_size: int = None,
             page: int = None,
     ):
@@ -139,7 +141,7 @@ class Group(Base):
             session: Session,
             group_actions_data: GroupActionsData,
             only_one: bool,
-    ) -> Union[List[Group], Group]:
+    ) -> list[Group] | Group:
         query = session.query(Group).filter_by(
             **group_actions_data.to_dict(),
         )
@@ -242,7 +244,7 @@ class GitHubOrg(Base):
             session: Session,
             github_org_data: GitHubOrgData,
             only_one: bool,
-    ) -> Optional[Union[List[GitHubOrg], GitHubOrg]]:
+    ) -> list[GitHubOrg] | GitHubOrg | None:
         if github_org_data is None:
             return
         query = session.query(GitHubOrg).filter_by(
@@ -297,7 +299,7 @@ class User(Base):
             only_one: bool,
             page_size: int = None,
             page: int = None,
-    ) -> Union[List[User], User, Page]:
+    ) -> list[User] | User | Page:
         orgs = []
         if user_data.github_orgs is not None:
             orgs = [
@@ -379,7 +381,7 @@ class ActionHistory(Base):
             only_one: bool,
             page_size: int = None,
             page: int = None,
-    ) -> Union[List[ActionHistory], ActionHistory, Page]:
+    ) -> list[ActionHistory] | ActionHistory | Page:
         query = session.query(ActionHistory).filter_by(
             **action_history_data.to_dict(),
         )
@@ -398,7 +400,7 @@ class ActionHistory(Base):
             action_id: int,
             page_size: int = None,
             page: int = None,
-    ) -> Union[List[ActionHistory], Page]:
+    ) -> list[ActionHistory] | Page:
         query = session.query(ActionHistory).filter_by(action_id=action_id)
         if page_size is None or page is None:
             return query.all()
@@ -411,7 +413,7 @@ class ActionHistory(Base):
             username: str,
             page_size: int = None,
             page: int = None,
-    ) -> Union[List[ActionHistoryData], Page]:
+    ) -> list[ActionHistoryData] | Page:
         query = session.query(ActionHistory).filter_by(username=username)
         if page_size is None or page is None:
             return query.all()
@@ -458,7 +460,7 @@ class ModuleStream(Base):
     def create_from_dataclass(
             module_stream_data: ModuleStreamData,
             session: Session,
-    ) -> Optional[ModuleStream]:
+    ) -> ModuleStream | None:
         if module_stream_data.is_empty:
             return
         module_stream = session.query(ModuleStream).filter_by(
@@ -475,9 +477,9 @@ class ModuleStream(Base):
     def search_by_dataclass(
             module_stream_data: ModuleStreamData,
             session: Session,
-    ) -> Optional[List[ModuleStream]]:
+    ) -> list[ModuleStream] | None:
         if module_stream_data.is_empty:
-            return None
+            return
         return session.query(ModuleStream).filter_by(
             **module_stream_data.to_dict()
         ).all()
@@ -502,9 +504,9 @@ class Release(Base):
     def create_from_dataclass(
             release_data: ReleaseData,
             session: Session,
-    ) -> Optional[Release]:
+    ) -> Release | None:
         if release_data.is_empty:
-            return None
+            return
         release = session.query(Release).filter_by(
             **release_data.to_dict(),
         ).one_or_none()
@@ -519,9 +521,9 @@ class Release(Base):
     def search_by_dataclass(
             release_data: ReleaseData,
             session: Session,
-    ) -> Optional[List[Release]]:
+    ) -> list[Release] | None:
         if release_data.is_empty:
-            return None
+            return
         return session.query(Release).filter_by(
             **release_data.to_dict()
         ).all()
@@ -620,9 +622,9 @@ class Package(Base):
     def search_by_dataclass(
             package_data: PackageData,
             session: Session,
-    ) -> Optional[List[Package]]:
+    ) -> list[Package] | None:
         if package_data.is_empty:
-            return None
+            return
         module_stream_data = package_data.module_stream
         module_stream = ModuleStream.search_by_dataclass(
             module_stream_data=module_stream_data,
@@ -902,9 +904,9 @@ class Action(Base):
             page_size: int = None,
             page: int = None,
             group_id: int = None,
-    ) -> Optional[Union[List[Action], Page, Action]]:
+    ) -> list[Action] | Page | Action | None:
         if action_data.is_empty:
-            return None
+            return
         in_package_set = []
         for in_package in action_data.in_package_set:
             in_package_set.extend(Package.search_by_dataclass(
