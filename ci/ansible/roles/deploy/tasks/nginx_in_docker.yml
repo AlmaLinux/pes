@@ -1,5 +1,4 @@
 ---
-
 - name: Prepare nginx configuration
   template:
     src: nginx.conf.j2

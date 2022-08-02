@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import json
-from typing import List, Optional, Union
 
 from flask import g
-from sqlalchemy_pagination import paginate, Page
+from sqlalchemy_pagination import (
+    paginate,
+    Page,
+)
 from api.exceptions import DBRecordNotFound
 from db.data_models import (
     ActionType,
@@ -14,8 +16,12 @@ from db.data_models import (
     PackageType,
     ModuleStreamData,
     ReleaseData,
-    UserData, GitHubOrgData, ActionHistoryData, DataClassesJSONEncoder,
-    TIME_FORMAT_STRING, GroupActionsData,
+    UserData,
+    GitHubOrgData,
+    ActionHistoryData,
+    DataClassesJSONEncoder,
+    TIME_FORMAT_STRING,
+    GroupActionsData,
 )
 from sqlalchemy import (
     Column,
@@ -26,12 +32,17 @@ from sqlalchemy import (
     Boolean,
     Enum,
     null,
-    DateTime, func,
+    DateTime,
+    func,
 )
 from sqlalchemy.exc import MultipleResultsFound
 from sqlalchemy.ext.declarative import declarative_base
 
-from sqlalchemy.orm import relationship, Session
+from sqlalchemy.orm import (
+    relationship,
+    Session,
+    backref,
+)
 
 from common.sentry import (
     get_logger,
@@ -59,9 +70,26 @@ users_github_orgs = Table(
     ),
 )
 
+groups_actions = Table(
+    'groups_actions',
+    Base.metadata,
+    Column(
+        'action_id', Integer, ForeignKey(
+            'actions.id',
+            ondelete='CASCADE',
+        ),
+    ),
+    Column(
+        'group_id', Integer, ForeignKey(
+            'groups.id',
+            ondelete='CASCADE',
+        ),
+    ),
+)
 
-class GroupActions(Base):
-    __tablename__ = 'groups_actions'
+
+class Group(Base):
+    __tablename__ = 'groups'
 
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
@@ -80,21 +108,29 @@ class GroupActions(Base):
         passive_deletes=True,
         backref='groups_actions',
     )
+    actions = relationship(
+        'Action',
+        secondary=groups_actions,
+        passive_deletes=True,
+        backref=backref('groups'),
+    )
 
     @staticmethod
     def search_by_github_orgs(
             session: Session,
-            github_orgs: List[GitHubOrgData],
+            github_orgs: list[GitHubOrgData],
             page_size: int = None,
             page: int = None,
     ):
-        query = session.query(GroupActions).filter(
-            GroupActions.github_org.has(
-                GitHubOrg.name.in_(
-                    github_org.name for github_org in github_orgs
+        query = session.query(Group)
+        if github_orgs is not None:
+            query = query.filter(
+                Group.github_org.has(
+                    GitHubOrg.name.in_(
+                        github_org.name for github_org in github_orgs
+                    )
                 )
             )
-        )
         if page is None or page_size is None:
             return query.all()
         else:
@@ -105,8 +141,8 @@ class GroupActions(Base):
             session: Session,
             group_actions_data: GroupActionsData,
             only_one: bool,
-    ) -> Union[List[GroupActions], GroupActions]:
-        query = session.query(GroupActions).filter_by(
+    ) -> list[Group] | Group:
+        query = session.query(Group).filter_by(
             **group_actions_data.to_dict(),
         )
         if group_actions_data.github_org is not None:
@@ -131,14 +167,15 @@ class GroupActions(Base):
             name=self.name,
             description=self.description,
             github_org=self.github_org.to_dataclass(),
+            actions_ids=[action.id for action in self.actions],
         )
 
     @staticmethod
     def create_from_dataclass(
             session: Session,
             group_actions_data: GroupActionsData,
-    ) -> GroupActions:
-        query = session.query(GroupActions).filter_by(
+    ) -> Group:
+        query = session.query(Group).filter_by(
             **group_actions_data.to_dict(),
         )
         org = GitHubOrg.create_from_dataclass(
@@ -150,11 +187,17 @@ class GroupActions(Base):
         )
         action_group = query.one_or_none()
         if action_group is None:
-            action_group = GroupActions(
+            action_group = Group(
                 **group_actions_data.to_dict(),
             )
+
             action_group.github_org = org
             action_group.github_org_id = org.id
+            if group_actions_data.actions_ids is not None:
+                actions = session.query(Action).filter(
+                    Action.id.in_(group_actions_data.actions_ids)
+                ).all()
+            action_group.actions = actions
             session.add(action_group)
             session.flush()
         return action_group
@@ -164,11 +207,15 @@ class GroupActions(Base):
             session: Session,
             group_actions_data: GroupActionsData,
     ):
-        group_actions = session.query(GroupActions).get(group_actions_data.id)
+        group_actions = session.query(Group).get(group_actions_data.id)
         org = GitHubOrg.create_from_dataclass(
             session=session,
             github_org_data=group_actions_data.github_org,
         )
+        actions = session.query(Action).filter(
+            Action.id.in_(group_actions_data.actions_ids)
+        ).all()
+        group_actions.actions = actions
         group_actions.github_org = org
         group_actions.github_org_id = org.id
         for key, value in group_actions_data.to_dict().items():
@@ -180,7 +227,7 @@ class GroupActions(Base):
             session: Session,
             group_actions_data: GroupActionsData,
     ):
-        session.query(GroupActions).filter_by(
+        session.query(Group).filter_by(
             **group_actions_data.to_dict(force_included=['id']),
         ).delete()
 
@@ -197,7 +244,7 @@ class GitHubOrg(Base):
             session: Session,
             github_org_data: GitHubOrgData,
             only_one: bool,
-    ) -> Optional[Union[List[GitHubOrg], GitHubOrg]]:
+    ) -> list[GitHubOrg] | GitHubOrg | None:
         if github_org_data is None:
             return
         query = session.query(GitHubOrg).filter_by(
@@ -252,7 +299,7 @@ class User(Base):
             only_one: bool,
             page_size: int = None,
             page: int = None,
-    ) -> Union[List[User], User, Page]:
+    ) -> list[User] | User | Page:
         orgs = []
         if user_data.github_orgs is not None:
             orgs = [
@@ -334,7 +381,7 @@ class ActionHistory(Base):
             only_one: bool,
             page_size: int = None,
             page: int = None,
-    ) -> Union[List[ActionHistory], ActionHistory, Page]:
+    ) -> list[ActionHistory] | ActionHistory | Page:
         query = session.query(ActionHistory).filter_by(
             **action_history_data.to_dict(),
         )
@@ -353,7 +400,7 @@ class ActionHistory(Base):
             action_id: int,
             page_size: int = None,
             page: int = None,
-    ) -> Union[List[ActionHistory], Page]:
+    ) -> list[ActionHistory] | Page:
         query = session.query(ActionHistory).filter_by(action_id=action_id)
         if page_size is None or page is None:
             return query.all()
@@ -366,7 +413,7 @@ class ActionHistory(Base):
             username: str,
             page_size: int = None,
             page: int = None,
-    ) -> Union[List[ActionHistoryData], Page]:
+    ) -> list[ActionHistoryData] | Page:
         query = session.query(ActionHistory).filter_by(username=username)
         if page_size is None or page is None:
             return query.all()
@@ -413,7 +460,7 @@ class ModuleStream(Base):
     def create_from_dataclass(
             module_stream_data: ModuleStreamData,
             session: Session,
-    ) -> Optional[ModuleStream]:
+    ) -> ModuleStream | None:
         if module_stream_data.is_empty:
             return
         module_stream = session.query(ModuleStream).filter_by(
@@ -430,9 +477,9 @@ class ModuleStream(Base):
     def search_by_dataclass(
             module_stream_data: ModuleStreamData,
             session: Session,
-    ) -> Optional[List[ModuleStream]]:
+    ) -> list[ModuleStream] | None:
         if module_stream_data.is_empty:
-            return None
+            return
         return session.query(ModuleStream).filter_by(
             **module_stream_data.to_dict()
         ).all()
@@ -457,9 +504,9 @@ class Release(Base):
     def create_from_dataclass(
             release_data: ReleaseData,
             session: Session,
-    ) -> Optional[Release]:
+    ) -> Release | None:
         if release_data.is_empty:
-            return None
+            return
         release = session.query(Release).filter_by(
             **release_data.to_dict(),
         ).one_or_none()
@@ -474,9 +521,9 @@ class Release(Base):
     def search_by_dataclass(
             release_data: ReleaseData,
             session: Session,
-    ) -> Optional[List[Release]]:
+    ) -> list[Release] | None:
         if release_data.is_empty:
-            return None
+            return
         return session.query(Release).filter_by(
             **release_data.to_dict()
         ).all()
@@ -575,9 +622,9 @@ class Package(Base):
     def search_by_dataclass(
             package_data: PackageData,
             session: Session,
-    ) -> Optional[List[Package]]:
+    ) -> list[Package] | None:
         if package_data.is_empty:
-            return None
+            return
         module_stream_data = package_data.module_stream
         module_stream = ModuleStream.search_by_dataclass(
             module_stream_data=module_stream_data,
@@ -601,6 +648,16 @@ class Action(Base):
     version = Column(Integer, nullable=False, default=1)
     is_approved = Column(Boolean, nullable=False, default=False)
     github_org = Column(String, nullable=True)
+    github_org_id = Column(Integer, ForeignKey(
+        'github_orgs.id',
+        ondelete='CASCADE',
+    ))
+    github_org_rel = relationship(
+        'GitHubOrg',
+        foreign_keys=[github_org_id],
+        passive_deletes=True,
+        backref='actions',
+    )
     source_release_id = Column(Integer, ForeignKey(
         'releases.id',
         ondelete='CASCADE',
@@ -690,8 +747,9 @@ class Action(Base):
                              in self.out_package_set],
             arches=self.arches.split(','),
             is_approved=self.is_approved,
-            github_org=self.github_org if
-            self.github_org else None
+            github_org=self.github_org_rel.to_dataclass() if
+            self.github_org_rel else None,
+            groups=[group.to_dataclass() for group in self.groups],
         )
 
     @staticmethod
@@ -715,6 +773,10 @@ class Action(Base):
             release_data=action_data.target_release,
             session=session,
         )
+        github_org = GitHubOrg.create_from_dataclass(
+            session=session,
+            github_org_data=action_data.github_org,
+        )
         action = session.query(Action).get(action_data.id)
         action_before = action.to_dataclass()
         if action is None:
@@ -728,6 +790,7 @@ class Action(Base):
         action.target_release = target_release
         action.in_package_set = in_package_set
         action.out_package_set = out_package_set
+        action.github_org_rel = github_org
         action.version += 1
         session.flush()
         session.refresh(action)
@@ -787,6 +850,10 @@ class Action(Base):
             release_data=action_data.target_release,
             session=session,
         )
+        github_org = GitHubOrg.create_from_dataclass(
+            session=session,
+            github_org_data=action_data.github_org,
+        )
         actions = Action.search_by_dataclass(action_data=action_data,
                                              session=session)
         actions = [
@@ -807,6 +874,7 @@ class Action(Base):
                 target_release=target_release,
                 in_package_set=in_package_set,
                 out_package_set=out_package_set,
+                github_org_rel=github_org,
             )
             session.add(action)
             session.flush()
@@ -835,9 +903,10 @@ class Action(Base):
             only_one: bool = False,
             page_size: int = None,
             page: int = None,
-    ) -> Optional[Union[List[Action], Page, Action]]:
+            group_id: int = None,
+    ) -> list[Action] | Page | Action | None:
         if action_data.is_empty:
-            return None
+            return
         in_package_set = []
         for in_package in action_data.in_package_set:
             in_package_set.extend(Package.search_by_dataclass(
@@ -858,9 +927,20 @@ class Action(Base):
             release_data=action_data.target_release,
             session=session,
         )
+        github_org = GitHubOrg.search_by_dataclass(
+            session=session,
+            github_org_data=action_data.github_org,
+            only_one=False,
+        )
         action_query = session.query(Action).filter_by(
             **action_data.to_dict(force_included=['id'])
         )
+        if github_org is not None:
+            action_query = action_query.filter(
+                Action.github_org_rel.has(GitHubOrg.id.in_(
+                    gho.id for gho in github_org
+                ))
+            )
         if source_release is not None:
             action_query = action_query.filter(
                 Action.source_release.has(
@@ -892,6 +972,12 @@ class Action(Base):
                         pkg.id for pkg in out_package_set
                     )
                 ),
+            )
+        if group_id is not None:
+            action_query = action_query.filter(
+                Action.groups.any(
+                    Group.id.in_([group_id])
+                )
             )
         if page_size is None or page is None:
             if only_one:

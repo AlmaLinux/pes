@@ -1,9 +1,9 @@
 # coding=utf-8
+from __future__ import annotations
 
 import requests
 import logging
 import os
-from typing import Optional
 
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
@@ -22,7 +22,7 @@ def get_aws_instance_api() -> str:
         return 'ItIsNotAWSInstance'
 
 
-def init_sentry_client(dsn: Optional[str] = None) -> None:
+def init_sentry_client(dsn: str | None = None) -> None:
     """
     Initialize sentry client with default options
     :param dsn: project auth key

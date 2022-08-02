@@ -3,14 +3,11 @@ import logging
 import os
 import shutil
 from contextlib import contextmanager
-from typing import List
 
 from alembic import command, script
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
 from db.data_models import GENERIC_OS_NAME
-from sqlalchemy import event
-from sqlalchemy.engine import Engine as SAEngine
 from sqlalchemy.exc import OperationalError
 
 from db.db_engine import Engine
@@ -67,7 +64,7 @@ def get_database_version() -> str:
     return current_rev or BASE_REVISION
 
 
-def get_revisions_list(config: Config) -> List[str]:
+def get_revisions_list(config: Config) -> list[str]:
     """
     Generates list of revisions
     """
@@ -155,7 +152,7 @@ def migrate_db(config: Config, revision: str) -> None:
         command.downgrade(config, revision=revision)
 
 
-def get_releases_list() -> List[str]:
+def get_releases_list() -> list[str]:
     with session_scope() as session:
         releases = session.query(Release).filter(
             Release.os_name != GENERIC_OS_NAME

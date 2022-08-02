@@ -3,8 +3,14 @@ from collections import defaultdict
 
 import wtforms.validators as validators
 
-from db.data_models import ActionType, ActionData, GENERIC_OS_NAME, \
-    PackageData, GroupActionsData, GitHubOrgData
+from db.data_models import (
+    ActionType,
+    ActionData,
+    GENERIC_OS_NAME,
+    PackageData,
+    GroupActionsData,
+    GitHubOrgData,
+)
 from db.utils import get_releases_list
 from flask_wtf import FlaskForm
 from wtforms import (
@@ -15,8 +21,30 @@ from wtforms import (
     IntegerField,
     Field,
     HiddenField,
+    SelectMultipleField,
 )
 from wtforms.widgets import TextArea
+
+SOURCE_RELEASES = [
+    'CentOS',
+    'OL',
+    'CloudLinux',
+]
+
+TARGET_RELEASES = [
+    'CloudLinux'
+]
+TARGET_RELEASES.extend(get_releases_list())
+
+
+class AddActionsToGroups(FlaskForm):
+    actions_ids = StringField(
+        'IDs of actions',
+        widget=TextArea(),
+    )
+    groups = SelectMultipleField(
+        'Groups of actions',
+    )
 
 
 class BulkUpload(FlaskForm):
@@ -35,21 +63,22 @@ class Dump(FlaskForm):
         validators=[
             validators.DataRequired(),
         ],
-        choices=['CentOS', 'OL']
+        choices=SOURCE_RELEASES
     )
     target_release = SelectField(
         'Target OS',
         validators=[
             validators.DataRequired(),
         ],
-        choices=get_releases_list()
+        choices=TARGET_RELEASES
     )
-    org = SelectField(
-        'GitHub organization',
-        validators=[
-            validators.DataRequired(),
-        ],
-        choices=[]
+    orgs = SelectMultipleField(
+        'GitHub organizations',
+        choices=[],
+    )
+    groups = SelectMultipleField(
+        'Groups of actions',
+        choices=[],
     )
 
 
@@ -110,6 +139,10 @@ class AddGroupActions(FlaskForm):
             validators.DataRequired(),
         ]
     )
+    actions_ids = StringField(
+        'IDs of actions',
+        widget=TextArea(),
+    )
     description = StringField(
         'Description of a group',
         validators=[
@@ -131,14 +164,23 @@ class AddGroupActions(FlaskForm):
             name=self.name.data,
             description=self.description.data,
             github_org=GitHubOrgData(
-                name=self.org.data,
-            )
+                github_id=self.org.data,
+            ),
+            actions_ids=[
+                int(action_id.strip())
+                for action_id in self.actions_ids.data.split(',')
+            ] if self.actions_ids.data else [],
         )
 
     def load_from_dataclass(self, group_actions_data: GroupActionsData):
+
         self.id.data = group_actions_data.id
         self.name.data = group_actions_data.name
         self.description.data = group_actions_data.description
+        self.org.data = group_actions_data.github_org.github_id
+        self.actions_ids.data = ','.join(
+            str(action_id) for action_id in group_actions_data.actions_ids
+        )
 
 
 class AddAction(FlaskForm):
@@ -247,6 +289,8 @@ class AddAction(FlaskForm):
     )
 
     def load_from_dataclass(self, action: ActionData):
+        from api.handlers import get_github_org
+
         def make_package_set_string(package: PackageData) -> str:
             if package.module_stream:
                 module_name = package.module_stream.name
@@ -262,7 +306,8 @@ class AddAction(FlaskForm):
         self.id.data = action.id
         self.description.data = action.description
         self.action.data = action.action
-        self.org.data = action.github_org
+
+        self.org.data = str(action.github_org.github_id)
         source_release = action.source_release
         target_release = action.target_release
         self.source_generic.data = source_release.os_name == GENERIC_OS_NAME

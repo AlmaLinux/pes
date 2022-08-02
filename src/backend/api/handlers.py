@@ -1,31 +1,56 @@
 # coding=utf-8
+from __future__ import annotations
+
 import datetime
 import json
 from itertools import zip_longest
-from typing import (
-    List,
-    Optional, Union, Tuple, Dict,
-)
 
-from sqlalchemy_pagination import Page, paginate
+from flask import (
+    request,
+    url_for,
+    session,
+    g,
+)
+from flask_github import GitHub
+from sqlalchemy_pagination import (
+    Page,
+    paginate,
+)
+from werkzeug.test import TestResponse
 
 from api.exceptions import BadRequestFormatExceptioin
-from common.forms import AddAction, AddGroupActions
-from db.data_models import ActionData, ActionType, GENERIC_OS_NAME, UserData, \
-    GitHubOrgData, ActionHistoryData, GLOBAL_ORGANIZATION, GroupActionsData
-from db.utils import session_scope
-from db.db_models import Action, User, GitHubOrg, ActionHistory, Package, \
-    GroupActions
-from flask_github import GitHub
+from api.utils import (
+    create_flask_client,
+    is_our_member,
+    raise_for_status,
+)
+from common.forms import (
+    AddAction,
+    AddGroupActions,
+)
 from common.sentry import (
     get_logger,
 )
-from api.utils import create_flask_client, is_our_member, raise_for_status
-from flask import request, url_for, session, g
-from werkzeug.test import TestResponse
+from db.data_models import (
+    ActionData,
+    ActionType,
+    GENERIC_OS_NAME,
+    UserData,
+    GitHubOrgData,
+    ActionHistoryData,
+    GroupActionsData,
+)
+from db.db_models import (
+    Action,
+    User,
+    GitHubOrg,
+    ActionHistory,
+    Package,
+    Group,
+)
+from db.utils import session_scope
 
 logger = get_logger(__name__)
-
 
 PAGE_SIZE = 20
 
@@ -72,7 +97,9 @@ def authorized_handler(access_token: str, github: GitHub):
                 ))
         db_user = User.search_by_dataclass(
             session=db_session,
-            user_data=user_data,
+            user_data=UserData(
+                github_id=github_user['id'],
+            ),
             only_one=True,
         )
         if db_user is None:
@@ -89,6 +116,8 @@ def authorized_handler(access_token: str, github: GitHub):
             ) for org_data in github_orgs_data
         ]
         db_user.github_orgs = github_orgs
+        db_user.github_access_token = access_token,
+        db_user.github_login = github_user['login'],
         db_session.flush()
         session.update({
             'github_id': db_user.github_id,
@@ -104,9 +133,20 @@ def push_action(action_data: ActionData) -> None:
         )
 
 
+def get_github_org(
+        github_org_data: GitHubOrgData,
+):
+    with session_scope() as db_session:
+        return GitHubOrg.search_by_dataclass(
+            session=db_session,
+            github_org_data=github_org_data,
+            only_one=True,
+        ).to_dataclass()
+
+
 def get_actions(
         action_data: ActionData = ActionData(is_approved=True),
-) -> Optional[Union[List[ActionData], Page]]:
+):
     with session_scope() as db_session:
         return [action.to_dataclass() for action in
                 Action.search_by_dataclass(
@@ -121,6 +161,15 @@ def remove_action(action_data: ActionData) -> None:
         db_session.flush()
 
 
+def remove_group(group_data: GroupActionsData) -> None:
+    with session_scope() as db_session:
+        Group.delete_by_dataclass(
+            session=db_session,
+            group_actions_data=group_data,
+        )
+        db_session.flush()
+
+
 def modify_action(action_data: ActionData) -> None:
     with session_scope() as db_session:
         Action.update_from_dataclass(
@@ -132,29 +181,43 @@ def modify_action(action_data: ActionData) -> None:
 def dump_pes_json(
         source_release: str,
         target_release: str,
-        organization: str,
+        organizations: list[str],
+        groups: list[str],
 ):
-
     legal_notice_value = 'Copyright (c) 2021 Oracle, AlmaLinux OS Foundation'
 
     def filter_action_by_releases(
             action: ActionData,
     ) -> bool:
         if (action.source_release is None or action.source_release.os_name in (
-            GENERIC_OS_NAME,
-            source_release,
-        )) and (action.target_release is None or action.target_release.os_name in (
-            GENERIC_OS_NAME,
-            target_release,
+                GENERIC_OS_NAME,
+                source_release,
+        )) and (
+                action.target_release is None or action.target_release.os_name in (
+                GENERIC_OS_NAME,
+                target_release,
         )):
             return True
         return False
 
-    if organization == GLOBAL_ORGANIZATION:
-        action_data = ActionData(is_approved=True)
-    else:
-        action_data = ActionData(is_approved=True, github_org=organization)
-    actions = get_actions(action_data=action_data)
+    actions = []
+    if not organizations and not groups:
+        actions = get_actions()
+    for org in organizations:
+        github_org = get_github_org(
+            github_org_data=GitHubOrgData(github_id=int(org))
+        )
+        actions.extend(action for action in get_actions(
+            action_data=ActionData(
+                is_approved=True,
+                github_org=github_org,
+            )
+        ) if action not in actions)
+    for group in groups:
+        actions.extend(
+            action for action in get_group_actions(group_id=int(group))
+            if action not in actions
+        )
     result = {
         'legal_notice': legal_notice_value,
         'timestamp': datetime.datetime.strftime(
@@ -207,14 +270,16 @@ def bulk_upload_handler(json_dict: dict) -> None:
 def dump_handler(
         source_release: str,
         target_release: str,
-        organization: str,
+        organizations: list[int],
+        groups: list[int],
 ) -> TestResponse:
     result = create_flask_client().get(
         url_for('dump'),
         data=json.dumps({
             'source_release': source_release,
             'target_release': target_release,
-            'org': organization,
+            'orgs': organizations,
+            'groups': groups,
         }),
         headers=list(request.headers),
         content_type='application/json',
@@ -229,25 +294,25 @@ def add_or_edit_group_of_actions_handler(
 ) -> None:
     group_actions_data = add_group_form.to_dataclass()
     with session_scope() as db_session:
-        if is_new:
-            GroupActions.create_from_dataclass(
-                session=db_session,
-                group_actions_data=group_actions_data,
-            )
-        else:
-            GroupActions.update_from_dataclass(
-                session=db_session,
-                group_actions_data=group_actions_data,
-            )
+        group_method = Group.create_from_dataclass if is_new else \
+            Group.update_from_dataclass
+        group_method(
+            session=db_session,
+            group_actions_data=group_actions_data,
+        )
 
 
 def add_or_edit_action_handler(
         add_action_form: AddAction,
         is_new: bool,
 ) -> None:
+    org_choices_dict = dict(add_action_form.org.choices)
     json_dict = {
         'action': add_action_form.action.data,
-        'org': add_action_form.org.data,
+        'org': {
+            'name': org_choices_dict[add_action_form.org.data],
+            'github_id': int(add_action_form.org.data),
+        },
         'description': add_action_form.description.data,
         'in_packageset': None,
         'out_packageset': None,
@@ -345,14 +410,16 @@ def add_or_edit_action_handler(
 
 def get_actions_handler(
         page: int,
+        group_id: int,
         page_size: int = PAGE_SIZE,
-) -> Tuple[List[ActionData], Page]:
+) -> tuple[list[ActionData], Page]:
     with session_scope() as db_session:
         pagination = Action.search_by_dataclass(
             action_data=ActionData(is_approved=None),
             session=db_session,
             page=page,
             page_size=page_size,
+            group_id=group_id,
         )
         actions = [action.to_dataclass() for action in pagination.items]
     for action in actions:
@@ -365,9 +432,10 @@ def get_actions_handler(
 
 def search_actions_handler(
         params: dict,
+        group_id: int,
         page: int,
         page_size: int = PAGE_SIZE,
-) -> Tuple[List[ActionData], Page]:
+) -> tuple[list[ActionData], Page]:
     with session_scope() as db_session:
         package_name = params.get('package')
         packages = db_session.query(Package).filter(
@@ -398,7 +466,7 @@ def search_actions_handler(
     return actions, pagination
 
 
-def get_action_handler(action_id: int) -> Optional[ActionData]:
+def get_action_handler(action_id: int) -> ActionData | None:
     with session_scope() as db_session:
         actions = Action.search_by_dataclass(
             action_data=ActionData(id=action_id, is_approved=None),
@@ -415,10 +483,16 @@ def get_action_handler(action_id: int) -> Optional[ActionData]:
     return action
 
 
-def get_group_of_actions_handler(group_id: int) -> Optional[GroupActionsData]:
+def get_group_of_actions_handler(group_id: int) -> GroupActionsData | None:
     with session_scope() as db_session:
-        group = db_session.query(GroupActions).get(group_id).to_dataclass()
+        group = db_session.query(Group).get(group_id).to_dataclass()
     return group
+
+
+def get_group_actions(group_id: int) -> list[ActionData]:
+    with session_scope() as db_session:
+        group = db_session.query(Group).get(group_id)
+        return [action.to_dataclass() for action in group.actions]
 
 
 def approve_pull_request(data: dict[str, int]):
@@ -435,7 +509,7 @@ def approve_pull_request(data: dict[str, int]):
 def get_users_handler(
         page: int,
         page_size: int = PAGE_SIZE,
-) -> Tuple[List[UserData], Page]:
+) -> tuple[list[UserData], Page]:
     with session_scope() as db_session:
         user_data = g.user_data  # type: UserData
         pagination = User.search_by_dataclass(
@@ -455,12 +529,13 @@ def get_users_handler(
 def get_groups_of_actions_handler(
         page: int,
         page_size: int = PAGE_SIZE,
-) -> Tuple[List[GroupActionsData], Page]:
+) -> tuple[list[GroupActionsData], Page]:
     with session_scope() as db_session:
         user_data = g.user_data  # type: UserData
-        pagination = GroupActions.search_by_github_orgs(
+        pagination = Group.search_by_github_orgs(
             session=db_session,
-            github_orgs=user_data.github_orgs,
+            github_orgs=None if session.get('is_our_member', False)
+            else user_data.github_orgs,
             page_size=page_size,
             page=page,
         )
@@ -476,7 +551,7 @@ def get_history_handler(
         action_id: int = None,
         username: str = None,
         page_size: int = PAGE_SIZE,
-) -> Tuple[List[ActionHistoryData], Page]:
+) -> tuple[list[ActionHistoryData], Page]:
     with session_scope() as db_session:
         if action_id is not None:
             pagination = ActionHistory.get_history_by_action_id(

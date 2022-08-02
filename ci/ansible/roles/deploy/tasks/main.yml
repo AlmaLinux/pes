@@ -1,12 +1,18 @@
 ---
-- include_tasks: common_setup.yml
-- include_tasks: deploy_files.yml
-- include_tasks: docker_networks.yml
-- include_tasks: postgres_in_docker.yml
-- include_tasks: migrate_sqlite_to_postgresql.yml
-- include_tasks: backend_in_docker.yml
-- include_tasks: create_certbot_systemd_timer.yml
+- import_tasks: common_setup.yml
+  tags:
+    - always
+- import_tasks: deploy_files.yml
+  tags:
+    - deploy_files
+- import_tasks: docker_stuff.yml
+- import_tasks: postgres_in_docker.yml
+- import_tasks: migrate_sqlite_to_postgresql.yml
+- import_tasks: backend_in_docker.yml
+- import_tasks: create_certbot_systemd_timer.yml
   when: domain is defined and domain != ''
-- include_tasks: setup_https.yml
+- import_tasks: setup_https.yml
   when: domain is defined and domain != ''
-- include_tasks: nginx_in_docker.yml
+- import_tasks: nginx_in_docker.yml
+  tags:
+    - nginx

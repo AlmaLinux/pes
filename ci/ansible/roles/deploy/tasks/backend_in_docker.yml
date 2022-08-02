@@ -15,9 +15,7 @@
       network: host
       target: "python39-uwsgi"
       dockerfile: "Dockerfile.backend"
-      rm: yes
     source: build
-    force_source: yes
 
 - name: Up the backend container from docker image
   docker_container:
@@ -51,7 +49,7 @@
     mounts:
       - source: "{{ source_path }}/src/backend"
         target: "/src/app"
-        read_only: yes
+        read_only: no
         type: bind
     log_driver: "json-file"
     log_options:

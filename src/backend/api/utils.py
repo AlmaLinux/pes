@@ -1,44 +1,46 @@
 # coding=utf-8
 import os
 from functools import wraps
-from typing import (
-    Dict,
-    Any,
-    AnyStr,
-)
+from typing import Any
 
 import jsonschema
-from requests import HTTPError
-
-from api.exceptions import (
-    BaseCustomException,
-    BadRequestFormatExceptioin, CustomHTTPError,
-)
-from common.sentry import get_logger
-from db.data_models import GitHubOrgData, UserData, MAIN_ORGANIZATION, \
-    GLOBAL_ORGANIZATION
-from db.db_models import GitHubOrg
-from db.json_schemas import json_schema_mapping
 from flask import (
     Response,
     jsonify,
     make_response,
     request, session, current_app, Flask,
 )
-from flask_api.status import HTTP_200_OK, HTTP_403_FORBIDDEN
 from flask import g
+from flask_api.status import (
+    HTTP_200_OK,
+    HTTP_403_FORBIDDEN,
+)
 from flask_bs4 import Bootstrap
 from flask_github import GitHub, GitHubError
 from werkzeug.exceptions import InternalServerError
 from werkzeug.test import TestResponse
 
+from api.exceptions import (
+    BaseCustomException,
+    BadRequestFormatExceptioin,
+    CustomHTTPError,
+)
+from common.sentry import get_logger
+from db.data_models import (
+    GitHubOrgData,
+    UserData,
+    MAIN_ORGANIZATION,
+    MAIN_ORGANIZATION_ID,
+)
+from db.db_models import GitHubOrg, Group
+from db.json_schemas import json_schema_mapping
 from db.utils import session_scope
 
 logger = get_logger(__name__)
 
 
 def jsonify_response(
-        result: Dict[str, Any],
+        result: dict[str, Any],
         status_code: int,
 ) -> Response:
     return make_response(
@@ -48,7 +50,7 @@ def jsonify_response(
 
 
 def textify_response(
-        content: AnyStr,
+        content: str,
         status_code: int,
 ) -> Response:
     response = make_response(
@@ -85,6 +87,7 @@ def validate_json(f):
                     err,
                 )
         return f(*args, **kwargs)
+
     return decorated_function
 
 
@@ -102,6 +105,7 @@ def success_result(f):
             result=result,
             status_code=HTTP_200_OK,
         )
+
     return decorated_function
 
 
@@ -141,6 +145,7 @@ def login_requires(f):
         if g.user_data is None:
             return access_is_forbidden
         return f(*args, **kwargs)
+
     return decorated_function
 
 
@@ -180,6 +185,7 @@ def membership_requires(f):
             return f(*args, **kwargs)
         else:
             return access_is_forbidden
+
     return decorated_function
 
 
@@ -199,11 +205,11 @@ def clear_sessions_fields_before_logout(f):
         for auth_field in auth_fields:
             session.pop(auth_field, None)
         return f(*args, **kwargs)
+
     return decorated_function
 
 
 def create_flask_client():
-
     app_client = current_app.test_client()
     for key, value in request.cookies.items():
         app_client.set_cookie('localhost', key, value)
@@ -217,6 +223,7 @@ def create_flask_application() -> Flask:
     Bootstrap(app)
     app.config['GITHUB_CLIENT_ID'] = os.environ['GITHUB_CLIENT_ID']
     app.config['GITHUB_CLIENT_SECRET'] = os.environ['GITHUB_CLIENT_SECRET']
+    app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 
     return app
 
@@ -250,7 +257,7 @@ def raise_for_status(response: TestResponse):
 
 def get_user_organizations(
         only_self: bool = False
-) -> list[str]:
+) -> list[tuple[str, str]]:
     """
     Return list of GH orgs for a currently logged user
     :param only_self: return list of orgs to which a user belongs
@@ -258,19 +265,30 @@ def get_user_organizations(
     user_data = g.user_data  # type: UserData
     user_orgs = [] if user_data is None else user_data.github_orgs
 
-    def is_admin_org():
+    def is_admin_org(only_self: bool, user_data: UserData):
         return not only_self and user_data.is_in_org(MAIN_ORGANIZATION)
 
-    if is_admin_org():
+    if is_admin_org(only_self, user_data):
         with session_scope() as db_session:
-            orgs = [org.to_dataclass().name for org in
-                    GitHubOrg.search_by_dataclass(
-                session=db_session,
-                github_org_data=GitHubOrgData(),
-                only_one=False,
-            )]
+            orgs = [
+                org.to_dataclass() for org in
+                GitHubOrg.search_by_dataclass(
+                    session=db_session,
+                    github_org_data=GitHubOrgData(),
+                    only_one=False,
+                )
+            ]
+            orgs = [(str(org.github_id), org.name) for org in orgs]
     else:
-        orgs = [org.name for org in user_orgs]
-    if not only_self and MAIN_ORGANIZATION not in orgs:
-        orgs.append(MAIN_ORGANIZATION)
+        orgs = [(str(org.github_id), org.name) for org in user_orgs]
+    if not only_self and (MAIN_ORGANIZATION_ID, MAIN_ORGANIZATION) not in orgs:
+        orgs.append((MAIN_ORGANIZATION_ID, MAIN_ORGANIZATION))
     return orgs
+
+
+def get_groups():
+    with session_scope() as db_session:
+        groups = [
+            group.to_dataclass() for group in db_session.query(Group).all()
+        ]
+        return [(str(group.id), group.name) for group in groups]
