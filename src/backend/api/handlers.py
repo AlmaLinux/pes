@@ -210,7 +210,7 @@ def dump_pes_json(
         actions.extend(action for action in get_actions(
             action_data=ActionData(
                 is_approved=True,
-                github_org=github_org.name,
+                github_org=github_org,
             )
         ) if action not in actions)
     for group in groups:
@@ -245,16 +245,16 @@ def bulk_upload_handler(json_dict: dict) -> None:
         action['action'] = ActionType.get_name(action['action'])
         action.pop('id', None)
         for root_key in (
-                'initial_release',
-                'release',
-                'in_packageset',
-                'out_packageset',
+            'initial_release',
+            'release',
+            'in_packageset',
+            'out_packageset',
         ):
             for unnecessary_key in (
-                    'modified',
-                    'tag',
-                    'z_stream',
-                    'set_id',
+                'modified',
+                'tag',
+                'z_stream',
+                'set_id',
             ):
                 (action.get(root_key) or {}).pop(unnecessary_key, None)
         logger.info('Uploaded action "%s" from "%s"', i, len(actions))

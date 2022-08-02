@@ -11,7 +11,7 @@
       wait_for:
         timeout: 15
 
-    - name: Run pqloader
+    - name: Run pgloader
       community.docker.docker_container_exec:
         container: "{{ container_env_prefix }}_postgres"
         command: 'pgloader /migration_scenario'
