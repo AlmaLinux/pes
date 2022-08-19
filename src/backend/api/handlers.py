@@ -184,7 +184,8 @@ def dump_pes_json(
         organizations: list[str],
         groups: list[str],
 ):
-    legal_notice_value = 'Copyright (c) 2021 Oracle, AlmaLinux OS Foundation'
+    legal_notice_value = f'Copyright (c) {datetime.datetime.utcnow().year} ' \
+                         f'Oracle, AlmaLinux OS Foundation'
 
     def filter_action_by_releases(
             action: ActionData,

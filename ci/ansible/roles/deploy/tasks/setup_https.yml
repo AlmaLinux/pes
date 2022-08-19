@@ -16,3 +16,17 @@
   systemd:
     name: "certbot.service"
     state: restarted
+
+- name: Prepare nginx configuration with SSL
+  template:
+    src: nginx.conf.j2
+    dest: "{{ config_root }}/nginx.conf"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Restart the nginx container
+  docker_container:
+    name: "{{ container_env_prefix }}_nginx"
+    restart: yes
+

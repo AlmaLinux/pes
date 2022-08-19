@@ -34,7 +34,7 @@ SOURCE_RELEASES = [
 TARGET_RELEASES = [
     'CloudLinux'
 ]
-TARGET_RELEASES.extend(get_releases_list())
+TARGET_RELEASES = sorted(get_releases_list()) + TARGET_RELEASES
 
 
 class AddActionsToGroups(FlaskForm):

@@ -11,3 +11,6 @@ postgres_host: postgres
 dnf_packages:
   - docker-ce
   - git
+  - python3-pip
+  - python3
+  - epel-release

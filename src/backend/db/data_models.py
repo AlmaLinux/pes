@@ -322,7 +322,7 @@ class ActionData(BaseData):
         out_package_set = json_data.get('out_packageset') or {}
         source_release = json_data.get('initial_release') or {}
         target_release = json_data.get('release') or {}
-        github_org = json_data.get('org')
+        github_org = json_data.get('org') or {}
         return ActionData(
             id=json_data.get('id'),
             description=json_data.get('description'),

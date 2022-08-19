@@ -38,10 +38,6 @@
     published_ports:
       - "127.0.0.1:5432:5432"
     mounts:
-      - source: "{{ config_root }}/db"
-        target: "/data"
-        read_only: no
-        type: bind
       - source: "{{ config_root }}/data/{{ postgres_db_subpath }}/pg_data"
         target: "/var/lib/postgresql/data"
         read_only: no
