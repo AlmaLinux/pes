@@ -22,19 +22,25 @@ from wtforms import (
     Field,
     HiddenField,
     SelectMultipleField,
+
 )
 from wtforms.widgets import TextArea
 
 SOURCE_RELEASES = [
+    'AlmaLinux',
     'CentOS',
     'OL',
     'CloudLinux',
 ]
 
 TARGET_RELEASES = [
-    'CloudLinux'
+    'AlmaLinux',
+    'CentOS',
+    'OL',
+    'Rocky',
+    'EuroLinux',
+    'CloudLinux',
 ]
-TARGET_RELEASES = sorted(get_releases_list()) + TARGET_RELEASES
 
 
 class AddActionsToGroups(FlaskForm):
@@ -53,6 +59,13 @@ class BulkUpload(FlaskForm):
         validators=[
             validators.DataRequired(),
         ],
+    )
+    org = SelectField(
+        'GitHub organization',
+        validators=[
+            validators.DataRequired(),
+        ],
+        choices=[]
     )
 
 
@@ -79,6 +92,10 @@ class Dump(FlaskForm):
     groups = SelectMultipleField(
         'Groups of actions',
         choices=[],
+    )
+    only_approved = BooleanField(
+        'Only approved actions',
+        default=True,
     )
 
 
@@ -203,11 +220,7 @@ class AddAction(FlaskForm):
         validators=[
             generic_release_validator,
         ],
-        choices=[
-            '',
-            'CentOS',
-            'OL',
-        ]
+        choices=TARGET_RELEASES
     )
     source_major_version = IntegerField(
         'Source major version',
@@ -235,7 +248,7 @@ class AddAction(FlaskForm):
         validators=[
             validators.Optional(),
         ],
-        choices=[''] + get_releases_list()
+        choices=TARGET_RELEASES
     )
     target_major_version = IntegerField(
         'Target major version',

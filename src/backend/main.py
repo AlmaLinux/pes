@@ -158,6 +158,7 @@ def index():
 @membership_requires
 def bulk_upload():
     bulk_upload_form = BulkUpload()
+    bulk_upload_form.org.choices = get_user_organizations()
     data = {
         'main_title': 'Bulk upload',
         'form': bulk_upload_form,
@@ -169,7 +170,10 @@ def bulk_upload():
             json_dict = json.load(bulk_upload_form.uploaded_file.data)
         except json.JSONDecodeError:
             raise BadRequestFormatExceptioin('The JSON file is incorrect')
-        bulk_upload_handler(json_dict=json_dict)
+        bulk_upload_handler(
+            json_dict=json_dict,
+            bulk_upload_form=bulk_upload_form,
+        )
         data['is_uploaded'] = True,
     return render_template('bulk_upload.html', **data)
 
@@ -193,6 +197,7 @@ def dump_json():
             target_release=dump_form.target_release.data,
             organizations=dump_form.orgs.data,
             groups=dump_form.groups.data,
+            only_approved=dump_form.only_approved.data,
         )
         return jsonify_response(
             result=req.json,
@@ -495,6 +500,7 @@ def dump():
         target_release=data['target_release'],
         organizations=data.get('orgs', []),
         groups=data.get('groups', []),
+        only_approved=data.get('only_approved', True),
     )
 
 

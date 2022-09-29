@@ -27,6 +27,16 @@
             &nbsp;
             <div class="row">
                 <div class="col-sm">
+                    {{ form.only_approved.label }}
+                </div>
+                <div class="col-sm">
+                    {{ form.only_approved }}
+                    <span class="text-danger">{{ ', '.join(form.errors[form.only_approved.name]) }}</span>
+                </div>
+            </div>
+            &nbsp;
+            <div class="row">
+                <div class="col-sm">
                     {{ form.orgs.label }}
                 </div>
                 <div class="col-sm">
