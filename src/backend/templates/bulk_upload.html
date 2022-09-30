@@ -25,6 +25,23 @@
                 </div>
                 <div class="row">
                     <div class="col-sm">
+                        {{ form.org.label }}
+                    </div>
+                    <div class="col-sm">
+                        {{ form.org }}
+                        <span class="text-danger">{{ ', '.join(form.errors[form.org.name]) }}</span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm">
+                        &nbsp;
+                    </div>
+                    <div class="col-sm">
+                        &nbsp;
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm">
                         &nbsp;
                     </div>
                     <div class="col-sm">

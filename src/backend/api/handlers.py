@@ -27,6 +27,7 @@ from api.utils import (
 from common.forms import (
     AddAction,
     AddGroupActions,
+    BulkUpload,
 )
 from common.sentry import (
     get_logger,
@@ -183,6 +184,7 @@ def dump_pes_json(
         target_release: str,
         organizations: list[str],
         groups: list[str],
+        only_approved: bool,
 ):
     legal_notice_value = f'Copyright (c) {datetime.datetime.utcnow().year} ' \
                          f'Oracle, AlmaLinux OS Foundation'
@@ -203,20 +205,27 @@ def dump_pes_json(
 
     actions = []
     if not organizations and not groups:
-        actions = get_actions()
+        actions = get_actions(
+            action_data=ActionData(
+                is_approved=True if only_approved else None,
+            )
+        )
     for org in organizations:
         github_org = get_github_org(
             github_org_data=GitHubOrgData(github_id=int(org))
         )
         actions.extend(action for action in get_actions(
             action_data=ActionData(
-                is_approved=True,
+                is_approved=True if only_approved else None,
                 github_org=github_org,
             )
         ) if action not in actions)
     for group in groups:
         actions.extend(
-            action for action in get_group_actions(group_id=int(group))
+            action for action in get_group_actions(
+                group_id=int(group),
+                only_approved=only_approved,
+            )
             if action not in actions
         )
     result = {
@@ -238,12 +247,17 @@ def dump_pes_json(
     return result
 
 
-def bulk_upload_handler(json_dict: dict) -> None:
+def bulk_upload_handler(json_dict: dict, bulk_upload_form: BulkUpload) -> None:
     if 'packageinfo' not in json_dict:
         raise BadRequestFormatExceptioin('The JSON has no field "packageinfo"')
     actions = json_dict['packageinfo']
+    org_choices_dict = dict(bulk_upload_form.org.choices)
     for i, action in enumerate(actions):
         action['action'] = ActionType.get_name(action['action'])
+        action['org'] = {
+            'name': org_choices_dict[bulk_upload_form.org.data],
+            'github_id': int(bulk_upload_form.org.data),
+        }
         action.pop('id', None)
         for root_key in (
             'initial_release',
@@ -273,6 +287,7 @@ def dump_handler(
         target_release: str,
         organizations: list[int],
         groups: list[int],
+        only_approved: bool,
 ) -> TestResponse:
     result = create_flask_client().get(
         url_for('dump'),
@@ -281,6 +296,7 @@ def dump_handler(
             'target_release': target_release,
             'orgs': organizations,
             'groups': groups,
+            'only_approved': only_approved,
         }),
         headers=list(request.headers),
         content_type='application/json',
@@ -490,10 +506,19 @@ def get_group_of_actions_handler(group_id: int) -> GroupActionsData | None:
     return group
 
 
-def get_group_actions(group_id: int) -> list[ActionData]:
+def get_group_actions(
+        group_id: int,
+        only_approved: bool,
+) -> list[ActionData]:
     with session_scope() as db_session:
         group = db_session.query(Group).get(group_id)
-        return [action.to_dataclass() for action in group.actions]
+        return [action.to_dataclass() for action in group.actions
+        # TODO: refactor it to separate function with condition
+        # True True True - select only approved and non-approved will be rejected
+        # True False False - select only approved and non-approved will be rejected
+        # False False True - select any actions
+        # False True True - select any actions
+                if only_approved - action.is_approved <= 0]
 
 
 def approve_pull_request(data: dict[str, int]):

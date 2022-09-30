@@ -168,7 +168,6 @@ put_action = {
     },
     "required": [
         "action",
-        "org",
         "in_packageset",
         "out_packageset",
         "initial_release",
@@ -535,7 +534,6 @@ post_action = {
     "required": [
         "id",
         "action",
-        "org",
         "in_packageset",
         "out_packageset",
         "initial_release",
@@ -578,6 +576,9 @@ get_dump = {
             "items": {
                 "type": "string"
             }
+        },
+        "only_approved": {
+            "type": "boolean",
         },
     },
     "required": [
