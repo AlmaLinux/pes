@@ -1,6 +1,9 @@
 # coding=utf-8
 from collections import defaultdict
 
+from common.forms import TARGET_RELEASES
+from db.utils import get_major_version_list
+
 put_action = {
     "$schema": "http://json-schema.org/draft-04/schema#",
     "type": "object",
@@ -556,35 +559,53 @@ post_pull_request = {
 }
 
 get_dump = {
-    "$schema": "http://json-schema.org/draft-04/schema#",
-    "type": "object",
-    "properties": {
-        "source_release": {
-            "type": "string"
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$ref": "#/definitions/Welcome4",
+    "definitions": {
+        "Welcome4": {
+            "type": "object",
+            "properties": {
+                "oses": {
+                    "type": "object",
+                    "patternProperties": {
+                        "^[0-9]$": {
+                            "$ref": "#/definitions/OsNames"
+                        }
+                    },
+                    "propertyNames": {
+                        "$ref": "#/definitions/Version"
+                    },
+                    "additionalProperties": False
+                },
+                "orgs": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "groups": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "only_approved": {
+                    "type": "boolean",
+                },
+            },
+            "required": [
+                "oses",
+            ]
         },
-        "target_release": {
-            "type": "string"
+        "Version": {
+            "type": "string",
+            "enum": [str(i) for i in get_major_version_list()]
         },
-        "orgs": {
-            "type": "array",
-            "items": {
-                "type": "string"
-            }
+        "OsNames": {
+            "type": "string",
+            "enum": TARGET_RELEASES,
         },
-        "groups": {
-            "type": "array",
-            "items": {
-                "type": "string"
-            }
-        },
-        "only_approved": {
-            "type": "boolean",
-        },
-    },
-    "required": [
-        "source_release",
-        "target_release",
-    ]
+    }
 }
 
 delete_group = {

@@ -32,7 +32,10 @@
                 &nbsp;
             </div>
             <div class="col-sm">
+                <blockquote class="blockquote text-center">
                 <h1>{{ main_title }}</h1>
+                </blockquote>
+                <br>
                 <p class="lead">
                 {% block text_1 %}
                 {% endblock text_1 %}
@@ -45,8 +48,12 @@
                 {% block text_2 %}
                 {% endblock text_2 %}
                 </p>
+                <blockquote class="blockquote text-center">
                 {% block table %}
                 {% endblock table %}
+                </blockquote>
+                {% block not_centered_table %}
+                {% endblock not_centered_table %}
             </div>
             <div class="col-sm">
                 &nbsp;

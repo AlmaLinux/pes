@@ -1,6 +1,6 @@
 {% extends "main.html" %}
 
-{% block table %}
+{% block not_centered_table %}
     {{ super() }}
     <div class="d-flex flex-row justify-content-between">
         <div>{% include "snipets/pagination.html" %}</div>
@@ -107,4 +107,4 @@
     </table>
     <br>
     {% include "snipets/pagination.html" %}
-{% endblock table %}
+{% endblock not_centered_table %}

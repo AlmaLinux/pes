@@ -8,9 +8,6 @@
             <div class="container">
                 <div class="row">
                     <div class="col-sm">
-                        {{ form.uploaded_file.label }}
-                    </div>
-                    <div class="col-sm">
                         {{ form.uploaded_file }}
                         <span class="text-danger">{{ ', '.join(form.errors[form.uploaded_file.name]) }}</span>
                     </div>
@@ -25,9 +22,9 @@
                 </div>
                 <div class="row">
                     <div class="col-sm">
-                        {{ form.org.label }}
-                    </div>
-                    <div class="col-sm">
+                        {{ form.org.label }}<br><br>
+{#                    </div>#}
+{#                    <div class="col-sm">#}
                         {{ form.org }}
                         <span class="text-danger">{{ ', '.join(form.errors[form.org.name]) }}</span>
                     </div>
@@ -41,9 +38,6 @@
                     </div>
                 </div>
                 <div class="row">
-                    <div class="col-sm">
-                        &nbsp;
-                    </div>
                     <div class="col-sm">
                         <button class="btn btn-primary submit-button" type="submit">
                             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none"></span>

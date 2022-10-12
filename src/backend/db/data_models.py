@@ -55,9 +55,18 @@ ReposMapping = {
 
 def change_repos_and_releases_by_mapping(
         action: ActionData,
-        target_release: str,
-        source_release: str,
+        oses: dict[int, str],
 ) -> None:
+    if action.action == ActionType.present:
+        source_release = oses[action.target_release.major_version] \
+            if action.target_release else None
+        target_release = oses[action.source_release.major_version] \
+            if action.source_release else None
+    else:
+        target_release = oses[action.target_release.major_version] \
+            if action.target_release else None
+        source_release = oses[action.source_release.major_version] \
+            if action.source_release else None
     for in_package in action.in_package_set:
         in_pkg_repo = in_package.repository
         if source_release in ReposMapping and \
@@ -341,15 +350,11 @@ class ActionData(BaseData):
             arches=json_data.get('architectures'),
         )
 
-    def dump(self, source_release: str, target_release: str) -> dict:
-        if self.action == ActionType.present:
-            change_repos_and_releases_by_mapping(action=self,
-                                                 target_release=source_release,
-                                                 source_release=target_release)
-        else:
-            change_repos_and_releases_by_mapping(action=self,
-                                                 target_release=target_release,
-                                                 source_release=source_release)
+    def dump(self, oses: dict[int, str]) -> dict:
+        change_repos_and_releases_by_mapping(
+            action=self,
+            oses=oses,
+        )
         result = asdict(self)
         result['in_packageset'] = {
             'package': list(),

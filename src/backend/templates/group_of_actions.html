@@ -1,6 +1,6 @@
 {% extends "main.html" %}
 
-{% block table %}
+{% block not_centered_table %}
     {{ super() }}
     {% include "snipets/pagination.html" %}
     <table id="dtBasic" class="table table-borderless text-center align-middle table-responsive-lg" data-order='[[ 0, "asc" ]]'>
@@ -37,4 +37,4 @@
     </table>
     <br>
     {% include "snipets/pagination.html" %}
-{% endblock table %}
+{% endblock not_centered_table %}
