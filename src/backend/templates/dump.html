@@ -43,8 +43,6 @@
                 <div class="row">
                     <div class="col">
                         {{ form.groups.label }}:
-{#                    </div>#}
-{#                    <div class="col">#}
                         {{ form.groups(rows=5, multiple=True) }}
                         <span class="text-danger">{{ ', '.join(form.errors[form.groups.name]) }}</span>
                     </div>
