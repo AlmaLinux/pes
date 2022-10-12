@@ -28,6 +28,11 @@ ReposMapping = {
         'el8-powertools': 'centos8-powertools',
         'el8-ha': 'centos8-ha',
         'el8-extras': 'centos8-extras',
+        'el9-baseos': 'centos9-baseos',
+        'el9-appstream': 'centos9-appstream',
+        'el9-crb': 'centos9-crb',
+        'el9-highavailability': 'centos9-highavailability',
+        'el9-extras': 'centos9-extras',
     },
     MAIN_ORGANIZATION: {
         'el8-baseos': 'almalinux8-baseos',
@@ -35,6 +40,11 @@ ReposMapping = {
         'el8-powertools': 'almalinux8-powertools',
         'el8-ha': 'almalinux8-ha',
         'el8-extras': 'almalinux8-extras',
+        'el9-baseos': 'almalinux9-baseos',
+        'el9-appstream': 'almalinux9-appstream',
+        'el9-crb': 'almalinux9-crb',
+        'el9-highavailability': 'almalinux9-highavailability',
+        'el9-extras': 'almalinux9-extras',
     },
     'Rocky': {
         'el8-baseos': 'rocky8-baseos',
@@ -42,6 +52,11 @@ ReposMapping = {
         'el8-powertools': 'rocky8-powertools',
         'el8-ha': 'rocky8-ha',
         'el8-extras': 'rocky8-extras',
+        'el9-baseos': 'rocky9-baseos',
+        'el9-appstream': 'rocky9-appstream',
+        'el9-crb': 'rocky9-crb',
+        'el9-highavailability': 'rocky9-highavailability',
+        'el9-extras': 'rocky9-extras',
     },
     'OL': {
         'el8-baseos': 'ol8-baseos',
@@ -49,6 +64,11 @@ ReposMapping = {
         'el8-powertools': 'ol8-crb',
         'el8-ha': 'ol8-addons',
         'el8-extras': 'ol8-baseos',
+        'el9-baseos': 'ol9-baseos',
+        'el9-appstream': 'ol9-appstream',
+        'el9-crb': 'ol9-crb',
+        'el9-highavailability': 'ol9-highavailability',
+        'el9-extras': 'ol9-extras',
     },
 }
 
