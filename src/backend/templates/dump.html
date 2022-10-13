@@ -5,79 +5,61 @@
     <form method="post" name="dump_form" role="form">
         {{ form.hidden_tag() }}
         <div class="container">
+            {% for os_form in form.oses %}
+                {{ os_form.hidden_tag() }}
+                <div class="row">
+                    <div class="col">
+                        OS name {{ os_form.os_name }} for OS version <b>{{ os_form.os_version.data }}</b>
+                        <span class="text-danger">{{ ', '.join(os_form.errors[os_form.os_name.name]) }}</span>
+                    </div>
+                </div>
+                &nbsp;
+            {% endfor %}
             <div class="row">
-                <div class="col-sm">
-                    {{ form.source_release.label }}
-                </div>
-                <div class="col-sm">
-                    {{ form.source_release }}
-                    <span class="text-danger">{{ ', '.join(form.errors[form.source_release.name]) }}</span>
-                </div>
-            </div>
-            &nbsp;
-            <div class="row">
-                <div class="col-sm">
-                    {{ form.target_release.label }}
-                </div>
-                <div class="col-sm">
-                    {{ form.target_release }}
-                    <span class="text-danger">{{ ', '.join(form.errors[form.target_release.name]) }}</span>
-                </div>
-            </div>
-            &nbsp;
-            <div class="row">
-                <div class="col-sm">
-                    {{ form.only_approved.label }}
-                </div>
-                <div class="col-sm">
+                <div class="col">
+                    {{ form.only_approved.label }}: &nbsp;
                     {{ form.only_approved }}
                     <span class="text-danger">{{ ', '.join(form.errors[form.only_approved.name]) }}</span>
                 </div>
             </div>
             &nbsp;
             <div class="row">
-                <div class="col-sm">
-                    {{ form.orgs.label }}
-                </div>
-                <div class="col-sm">
+                <div class="col">
+                    {{ form.orgs.label }}:<br><br>
                     {{ form.orgs(rows=5, multiple=True) }}
                     <span class="text-danger">{{ ', '.join(form.errors[form.orgs.name]) }}</span>
                 </div>
             </div>
+            {% if form.groups.choices %}&nbsp;
+                <div class="row">
+                    <div class="col">
+                        &nbsp;
+                    </div>
+                    <div class="col">
+                        &nbsp;
+                    </div>
+                </div>
+                &nbsp;
+                <div class="row">
+                    <div class="col">
+                        {{ form.groups.label }}:
+                        {{ form.groups(rows=5, multiple=True) }}
+                        <span class="text-danger">{{ ', '.join(form.errors[form.groups.name]) }}</span>
+                    </div>
+                </div>
+            {% endif %}
             &nbsp;
             <div class="row">
-                <div class="col-sm">
+                <div class="col">
                     &nbsp;
                 </div>
-                <div class="col-sm">
+                <div class="col">
                     &nbsp;
                 </div>
             </div>
             &nbsp;
             <div class="row">
-                <div class="col-sm">
-                    {{ form.groups.label }}
-                </div>
-                <div class="col-sm">
-                    {{ form.groups(rows=5, multiple=True) }}
-                    <span class="text-danger">{{ ', '.join(form.errors[form.groups.name]) }}</span>
-                </div>
-            </div>
-            &nbsp;
-            <div class="row">
-                <div class="col-sm">
-                    &nbsp;
-                </div>
-                <div class="col-sm">
-                    &nbsp;
-                </div>
-            </div>
-            &nbsp;
-            <div class="row">
-                <div class="col-sm">
-                    &nbsp;
-                </div>
-                <div class="col-sm">
+                <div class="col">
                     <button class="btn btn-primary submit-button" type="submit">
                         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none"></span>
                         <span class="sr-only submit-button-text" data-send-text="Dumping...">Dump</span>

@@ -8,3 +8,11 @@
   with_items:
     - "../../../ci"
     - "../../../src"
+
+- name: Restart backend docker container
+  docker_container:
+    name: "{{ container_env_prefix }}_backend"
+    restart: yes
+  tags:
+    - never
+    - deploy_files

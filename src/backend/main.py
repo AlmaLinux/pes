@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import uuid
 
 from datetime import datetime
 
@@ -51,7 +52,7 @@ from common.forms import (
     BulkUpload,
     Dump,
     AddAction,
-    AddGroupActions,
+    AddGroupActions, TARGET_RELEASES, DumpOsVersions,
 )
 from common.sentry import (
     init_sentry_client,
@@ -73,6 +74,8 @@ from flask import (
 from flask_api.status import HTTP_200_OK
 from flask_github import GitHub
 from werkzeug.exceptions import InternalServerError
+
+from db.utils import get_major_version_list
 
 app = create_flask_application()
 init_sentry_client()
@@ -184,6 +187,10 @@ def bulk_upload():
 )
 def dump_json():
     dump_form = Dump()
+    for i, os_version in enumerate(get_major_version_list()):
+        os_form = dump_form.oses[i].form  # type: DumpOsVersions
+        os_form.os_version.data = os_version
+        os_form.os_name.choices = TARGET_RELEASES
     dump_form.orgs.choices = get_user_organizations()
     dump_form.groups.choices = get_groups()
     data = {
@@ -193,8 +200,9 @@ def dump_json():
     data.update(_prepare_data_dict())
     if dump_form.validate_on_submit():
         req = dump_handler(
-            source_release=dump_form.source_release.data,
-            target_release=dump_form.target_release.data,
+            oses={
+                os.os_version.data: os.os_name.data for os in dump_form.oses
+            },
             organizations=dump_form.orgs.data,
             groups=dump_form.groups.data,
             only_approved=dump_form.only_approved.data,
@@ -496,8 +504,7 @@ def pull_requests():
 def dump():
     data = request.json
     return dump_pes_json(
-        source_release=data['source_release'],
-        target_release=data['target_release'],
+        oses=data['oses'],
         organizations=data.get('orgs', []),
         groups=data.get('groups', []),
         only_approved=data.get('only_approved', True),

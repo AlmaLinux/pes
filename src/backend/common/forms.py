@@ -11,7 +11,7 @@ from db.data_models import (
     GroupActionsData,
     GitHubOrgData,
 )
-from db.utils import get_releases_list
+from db.utils import get_major_version_list
 from flask_wtf import FlaskForm
 from wtforms import (
     StringField,
@@ -22,6 +22,8 @@ from wtforms import (
     Field,
     HiddenField,
     SelectMultipleField,
+    FieldList,
+    FormField,
 
 )
 from wtforms.widgets import TextArea
@@ -69,21 +71,31 @@ class BulkUpload(FlaskForm):
     )
 
 
+class DumpOsVersions(FlaskForm):
+    os_version = IntegerField(
+        'OS version',
+        validators=[
+            validators.DataRequired(),
+        ],
+        render_kw={
+            'readonly': True,
+            'size': 1,
+        }
+    )
+    os_name = SelectField(
+        'OS name',
+        validators=[
+            validators.DataRequired(),
+        ],
+        choices=[],
+    )
+
+
 class Dump(FlaskForm):
 
-    source_release = SelectField(
-        'Source OS',
-        validators=[
-            validators.DataRequired(),
-        ],
-        choices=SOURCE_RELEASES
-    )
-    target_release = SelectField(
-        'Target OS',
-        validators=[
-            validators.DataRequired(),
-        ],
-        choices=TARGET_RELEASES
+    oses = FieldList(
+        FormField(DumpOsVersions),
+        min_entries=len(get_major_version_list())
     )
     orgs = SelectMultipleField(
         'GitHub organizations',

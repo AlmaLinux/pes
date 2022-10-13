@@ -160,3 +160,9 @@ def get_releases_list() -> list[str]:
         return list(set(
             release.to_dataclass().os_name for release in releases
         ))
+
+
+def get_major_version_list() -> list[str]:
+    with session_scope() as session:
+        releases = session.query(Release.major_version).distinct().all()
+        return sorted([release[0] for release in releases])

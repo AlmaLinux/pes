@@ -180,12 +180,12 @@ def modify_action(action_data: ActionData) -> None:
 
 
 def dump_pes_json(
-        source_release: str,
-        target_release: str,
+        oses: dict[int, str],
         organizations: list[str],
         groups: list[str],
         only_approved: bool,
 ):
+    oses = {int(key): value for key, value in oses.items()}
     legal_notice_value = f'Copyright (c) {datetime.datetime.utcnow().year} ' \
                          f'Oracle, AlmaLinux OS Foundation'
 
@@ -194,12 +194,14 @@ def dump_pes_json(
     ) -> bool:
         if (action.source_release is None or action.source_release.os_name in (
                 GENERIC_OS_NAME,
-                source_release,
+                oses[action.source_release.major_version],
         )) and (
-                action.target_release is None or action.target_release.os_name in (
-                GENERIC_OS_NAME,
-                target_release,
-        )):
+                action.target_release is None or action.target_release.os_name
+                in (
+                    GENERIC_OS_NAME,
+                    oses[action.target_release.major_version],
+                )
+        ):
             return True
         return False
 
@@ -236,10 +238,7 @@ def dump_pes_json(
             '%Y%m%d%H%MZ',
         ),
         'packageinfo': [
-            action.dump(
-                source_release=source_release,
-                target_release=target_release,
-            ) for action in actions if
+            action.dump(oses=oses) for action in actions if
             filter_action_by_releases(action)
         ],
     }
@@ -283,8 +282,7 @@ def bulk_upload_handler(json_dict: dict, bulk_upload_form: BulkUpload) -> None:
 
 
 def dump_handler(
-        source_release: str,
-        target_release: str,
+        oses: dict[int, str],
         organizations: list[int],
         groups: list[int],
         only_approved: bool,
@@ -292,8 +290,7 @@ def dump_handler(
     result = create_flask_client().get(
         url_for('dump'),
         data=json.dumps({
-            'source_release': source_release,
-            'target_release': target_release,
+            'oses': oses,
             'orgs': organizations,
             'groups': groups,
             'only_approved': only_approved,
