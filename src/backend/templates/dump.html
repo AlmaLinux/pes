@@ -30,19 +30,11 @@
                     <span class="text-danger">{{ ', '.join(form.errors[form.orgs.name]) }}</span>
                 </div>
             </div>
-            {% if form.groups.choices %}&nbsp;
-                <div class="row">
-                    <div class="col">
-                        &nbsp;
-                    </div>
-                    <div class="col">
-                        &nbsp;
-                    </div>
-                </div>
+            {% if form.groups.choices %}
                 &nbsp;
                 <div class="row">
                     <div class="col">
-                        {{ form.groups.label }}:
+                        {{ form.groups.label }}:<br><br>
                         {{ form.groups(rows=5, multiple=True) }}
                         <span class="text-danger">{{ ', '.join(form.errors[form.groups.name]) }}</span>
                     </div>
