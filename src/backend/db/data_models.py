@@ -70,6 +70,12 @@ ReposMapping = {
         'el9-highavailability': 'ol9-highavailability',
         'el9-extras': 'ol9-extras',
     },
+    'EuroLinux': {
+        'el8-baseos': 'certify-baseos',
+        'el8-appstream': 'certify-appstream',
+        'el8-powertools': 'certify-powertools',
+        'el8-ha': 'high-availability',
+    }
 }
 
 
