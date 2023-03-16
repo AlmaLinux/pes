@@ -173,7 +173,6 @@ put_action = {
         "action",
         "in_packageset",
         "out_packageset",
-        "initial_release",
         "release",
         "architectures"
     ]
@@ -488,7 +487,7 @@ post_action = {
             ]
         },
         "initial_release": {
-            "type": "object",
+            "type": ["object", "null"],
             "properties": {
                 "os_name": {
                     "type": "string"
@@ -500,11 +499,6 @@ post_action = {
                     "type": "integer"
                 }
             },
-            "required": [
-                "os_name",
-                "major_version",
-                "minor_version"
-            ]
         },
         "release": {
             "type": "object",
@@ -539,7 +533,6 @@ post_action = {
         "action",
         "in_packageset",
         "out_packageset",
-        "initial_release",
         "release",
         "architectures"
     ]

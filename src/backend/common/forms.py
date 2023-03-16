@@ -3,6 +3,7 @@ from collections import defaultdict
 
 import wtforms.validators as validators
 
+from common.sentry import get_logger
 from db.data_models import (
     ActionType,
     ActionData,
@@ -43,6 +44,8 @@ TARGET_RELEASES = [
     'EuroLinux',
     'CloudLinux',
 ]
+
+logger = get_logger(__name__)
 
 
 class AddActionsToGroups(FlaskForm):
@@ -229,10 +232,7 @@ class AddAction(FlaskForm):
     )
     source_release = SelectField(
         'Source OS',
-        validators=[
-            generic_release_validator,
-        ],
-        choices=TARGET_RELEASES
+        choices=TARGET_RELEASES + ['']
     )
     source_major_version = IntegerField(
         'Source major version',
@@ -335,13 +335,20 @@ class AddAction(FlaskForm):
         self.org.data = str(action.github_org.github_id)
         source_release = action.source_release
         target_release = action.target_release
-        self.source_generic.data = source_release.os_name == GENERIC_OS_NAME
-        if source_release.os_name == GENERIC_OS_NAME:
+        if source_release is None:
+            logger.warning('source release %s', source_release)
             self.source_release.data = ''
+            self.source_major_version.data = ''
+            self.source_minor_version.data = ''
+            self.source_generic.data = False
         else:
-            self.source_release.data = source_release.os_name
-        self.source_major_version.data = source_release.major_version
-        self.source_minor_version.data = source_release.minor_version
+            self.source_generic.data = source_release.os_name == GENERIC_OS_NAME
+            if source_release.os_name == GENERIC_OS_NAME:
+                self.source_release.data = ''
+            else:
+                self.source_release.data = source_release.os_name
+            self.source_major_version.data = source_release.major_version
+            self.source_minor_version.data = source_release.minor_version
         self.target_generic.data = target_release.os_name == GENERIC_OS_NAME
         if target_release.os_name == GENERIC_OS_NAME:
             self.target_release.data = ''

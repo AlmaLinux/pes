@@ -345,7 +345,7 @@ def add_or_edit_action_handler(
             source_major_version.data
         json_dict['initial_release']['minor_version'] = add_action_form. \
             source_minor_version.data
-    elif add_action_form.source_release != '':
+    elif add_action_form.source_release.data != '':
         json_dict['initial_release'] = {}
         json_dict['initial_release']['os_name'] = add_action_form. \
             source_release.data
@@ -360,7 +360,7 @@ def add_or_edit_action_handler(
             target_major_version.data
         json_dict['release']['minor_version'] = add_action_form. \
             target_minor_version.data
-    elif add_action_form.target_release != '':
+    elif add_action_form.target_release.data != '':
         json_dict['release'] = {}
         json_dict['release']['os_name'] = add_action_form. \
             target_release.data
@@ -408,6 +408,7 @@ def add_or_edit_action_handler(
             'repository': repo,
             'modulestream': module_data,
         })
+    logger.warning(json_dict)
     flask_client = create_flask_client()
     if is_new:
         http_method = flask_client.put
