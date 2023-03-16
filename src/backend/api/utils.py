@@ -142,7 +142,7 @@ def login_requires(f):
             },
             status_code=HTTP_403_FORBIDDEN,
         )
-        if g.user_data is None:
+        if g.user_data.github_access_token is None:
             return access_is_forbidden
         return f(*args, **kwargs)
 
@@ -150,7 +150,7 @@ def login_requires(f):
 
 
 def is_our_member(github: GitHub) -> bool:
-    if g.user_data is None:
+    if g.user_data.github_access_token is None:
         return False
     if g.user_data.github_orgs is None:
         return False

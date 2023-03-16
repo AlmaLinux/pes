@@ -77,32 +77,51 @@ def change_repos_and_releases_by_mapping(
         action: ActionData,
         oses: dict[int, str],
 ) -> None:
-    if action.action == ActionType.present:
-        source_release = oses[action.target_release.major_version] \
-            if action.target_release else None
-        target_release = oses[action.source_release.major_version] \
-            if action.source_release else None
+
+    if action.action == ActionType.present.name:
+        source_major_version = getattr(
+            action.target_release,
+            'major_version',
+            None,
+        )
+        target_major_version = getattr(
+            action.source_release,
+            'major_version',
+            None,
+        )
     else:
-        target_release = oses[action.target_release.major_version] \
-            if action.target_release else None
-        source_release = oses[action.source_release.major_version] \
-            if action.source_release else None
+        source_major_version = getattr(
+            action.source_release,
+            'major_version',
+            None,
+        )
+        target_major_version = getattr(
+            action.target_release,
+            'major_version',
+            None,
+        )
+    mapped_target_os = oses.get(target_major_version)
+    mapped_source_os = oses.get(source_major_version)
     for in_package in action.in_package_set:
-        in_pkg_repo = in_package.repository
-        if source_release in ReposMapping and \
-                in_pkg_repo in ReposMapping[source_release]:
-            in_package.repository = ReposMapping[source_release][in_pkg_repo]
-    if action.source_release is not None and \
-            action.source_release.os_name == GENERIC_OS_NAME:
-        action.source_release.os_name = source_release
+        pkg_repo = in_package.repository
+        mapped_repo = ReposMapping.get(
+            mapped_source_os, {}
+        ).get(pkg_repo, None)
+        if mapped_repo is not None:
+            in_package.repository = mapped_repo
     for out_package in action.out_package_set:
-        out_pkg_repo = out_package.repository
-        if target_release in ReposMapping and \
-                out_pkg_repo in ReposMapping[target_release]:
-            out_package.repository = ReposMapping[target_release][out_pkg_repo]
-    if action.target_release is not None and \
-            action.target_release.os_name == GENERIC_OS_NAME:
-        action.target_release.os_name = target_release
+        pkg_repo = out_package.repository
+        mapped_repo = ReposMapping.get(
+            mapped_target_os, {}
+        ).get(pkg_repo, None)
+        if mapped_repo is not None:
+            out_package.repository = mapped_repo
+    release_data = action.source_release
+    if getattr(release_data, 'os_name', None) == GENERIC_OS_NAME:
+        release_data.os_name = oses[release_data.major_version]
+    release_data = action.target_release
+    if getattr(release_data, 'os_name', None) == GENERIC_OS_NAME:
+        release_data.os_name = oses[release_data.major_version]
 
 
 class DataClassesJSONEncoder(flask.json.JSONEncoder):
