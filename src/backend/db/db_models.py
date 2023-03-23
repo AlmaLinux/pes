@@ -34,6 +34,7 @@ from sqlalchemy import (
     null,
     DateTime,
     func,
+    asc,
 )
 from sqlalchemy.exc import MultipleResultsFound
 from sqlalchemy.ext.declarative import declarative_base
@@ -979,6 +980,7 @@ class Action(Base):
                     Group.id.in_([group_id])
                 )
             )
+        action_query = action_query.order_by(asc(Action.id))
         if page_size is None or page is None:
             if only_one:
                 result = action_query.one_or_none()

@@ -12,6 +12,7 @@ from flask import (
     g,
 )
 from flask_github import GitHub
+from sqlalchemy import asc
 from sqlalchemy_pagination import (
     Page,
     paginate,
@@ -230,6 +231,10 @@ def dump_pes_json(
             )
             if action not in actions
         )
+    actions = sorted([
+        action.dump(oses=oses) for action in actions if
+        filter_action_by_releases(action)
+    ], key=lambda i: i['id'])
     result = {
         'legal_notice': legal_notice_value,
         'timestamp': datetime.datetime.strftime(
@@ -237,10 +242,7 @@ def dump_pes_json(
             # YearMonthDayHoursMinutesZ
             '%Y%m%d%H%MZ',
         ),
-        'packageinfo': [
-            action.dump(oses=oses) for action in actions if
-            filter_action_by_releases(action)
-        ],
+        'packageinfo': actions,
     }
 
     return result
@@ -471,6 +473,7 @@ def search_actions_handler(
             )
         )
         total_query = query_actions_1.union(query_actions_2)
+        total_query = total_query.order_by(asc(Action.id))
         pagination = paginate(total_query, page=page, page_size=page_size)
         actions = [action.to_dataclass() for action in pagination.items]
     for action in actions:
